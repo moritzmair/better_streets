@@ -140,7 +140,32 @@ Die Kopplung löst sich, sobald du einen Punkt der Nachbarspur ziehst – ab da 
 Endpunkte fangen automatisch an vorhandenen Punkten – so schließen Fahrbahnen bündig an.
 Der Stand wird laufend im Browser (localStorage) gesichert, inklusive Luftbild bis ca. 3,5 MB.
 
+## Skizzen speichern und weitergeben
+
+Über **Skizzen** in der Kopfzeile:
+
+* **Im Browser** – Entwurf unter einem Namen ablegen; die Liste zeigt Datum, Anzahl der
+  Elemente, ob ein Luftbild dabei ist und wie groß der Eintrag ist. Gleicher Name überschreibt.
+  Reicht der Platz für das Luftbild nicht (localStorage fasst je nach Browser rund 5 MB),
+  wird die Skizze ohne Bild gesichert und das gesagt.
+* **Als Datei speichern** – `.json` mit Geometrie, Maßstab und, wenn vorhanden, dem Luftbild.
+  Lokal läuft das über einen Blob-Download; eingebettet (als claude.ai-Artifact) über die
+  `downloads`-Fähigkeit der Laufzeit, bei der die Betrachterin den Speichervorgang bestätigt.
+  Steht beides nicht zur Verfügung, verschwindet der Knopf und „JSON kopieren" führt zum Ziel.
+  Der Bild-Export bietet denselben Weg an.
+* **Datei laden…** oder **JSON einfügen** – lädt eine Skizze zurück, egal ob aus Datei oder
+  Zwischenablage. Beim Laden wird ein Undo-Punkt gesetzt, `Strg+Z` bringt den vorherigen
+  Stand zurück.
+
+Unabhängig davon sichert die Seite den aktuellen Stand weiterhin automatisch, damit nach dem
+Schließen des Tabs nichts verloren geht.
+
 ## Export
 
 „Bild exportieren" rendert Luftbild + Entwurf in Originalauflösung (max. 4000 px).
 Bild per Rechtsklick speichern oder in die Zwischenablage kopieren.
+
+## Projekt
+
+Ein Projekt von **Moritz Mair**.
+Wenn es dir weiterhilft: [Kaffee spendieren](https://www.paypal.com/paypalme/moritzmair) ☕
