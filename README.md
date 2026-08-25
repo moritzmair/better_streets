@@ -22,7 +22,7 @@ Jeder Zug hat eine Kurvenführung:
   Reicht die Schenkellänge nicht, wird der Bogen verkleinert – der Inspektor zeigt dann
   den tatsächlich erreichten Radius.
 
-Liegt ein Radius unter dem Richtwert des Typs (Kfz 5 m, Bus 10 m, Rad 5 m, Fuß 1,5 m),
+Liegt ein Radius unter dem Richtwert des Typs (Kfz 5 m, Bus 10 m, Radweg einspurig 2,5 m, übrige Radanlagen 5 m, Fuß 1,5 m),
 markiert die Prüfung die Stelle im Bild mit dem gemessenen Radius. Über „Radien" abschaltbar;
 im Export sind die Marken nie enthalten. Beim Kreisverkehr ordnet der Inspektor den
 Außendurchmesser ein (Mini 13–22 m, klein 26–40 m).
@@ -67,8 +67,46 @@ breit durchgezogen (0,25 m). Vorbelegt nach Typ:
 | Gehweg, Grünstreifen, Radweg | keine |
 
 Parkstreifen bekommen Stellplatzteiler (quer 2,5 m, längs 5,5 m), die Sperrfläche
-eine Schraffur, der Fußgängerüberweg Zebrastreifen quer zur Gehrichtung.
+eine Schraffur. Der Fußgängerüberweg wird von Bordstein zu Bordstein gezeichnet; seine
+Streifen liegen quer zur Gehrichtung, also parallel zur Fahrbahnachse, und sind 4 m tief.
 Radverkehrsanlagen sind grün eingefärbt.
+
+## Querungen
+
+Wege haben einen Rang: Kfz (1) < Rad (2) < Fuß (3). Überquert ein Weg eine rangniedrigere
+Anlage, wird die Überlappung automatisch als Querung gezeichnet statt als eigener Belag:
+
+* **Radweg über Fahrbahn** – kein grüner Belag mehr, sondern eine Furt: zwei Reihen weißer
+  Blöcke (0,5 m / 0,5 m) an den Rändern der Querung.
+* **Gehweg über Fahrbahn oder Radweg** – Zebrastreifen in der Breite des Gehwegs, an jeder
+  gequerten Anlage einzeln.
+
+Die Randmarkierungen des querenden Wegs setzen dort aus. Erkannt wird die Überlappung
+geometrisch, also auch bei Kurven und schrägen Querungen. Pro Element abschaltbar über
+„Querung über Fahrbahn/Radweg" im Inspektor – dann wird wieder durchgehend Belag gezeichnet.
+
+## Kreisverkehr
+
+Der Kreisverkehr liegt über den Zufahrten: eine Fahrspur, die zu weit hineinreicht, wird von
+Kreisfahrbahn und Insel überdeckt statt sie zu überzeichnen. Die Markierungen der Zufahrten
+enden am Außenrand des Kreises, und die Außenlinie des Kreises reißt an jeder Zufahrt auf.
+
+## Ebenen
+
+Die Zeichenreihenfolge hängt am Typ, nicht an der Reihenfolge des Zeichnens:
+
+| | |
+|---|---|
+| 10 | Grünflächen, Aufenthaltsflächen, Grünstreifen |
+| 20 | Kfz: Parken, Fahrspuren, Kreisverkehr, Busspur |
+| 30 | Rad: Schutzstreifen, Radfahrstreifen, Fahrradstraße, Radweg |
+| 40 | Fuß: Gehwege |
+| 50 | Markierungsflächen: Verkehrsinsel, Sperrfläche |
+| 60 | Fußgängerüberwege |
+| 70 | Bäume |
+
+Ein später gezeichneter Gehweg liegt also immer über der Fahrbahn, eine Grünfläche immer
+darunter – unabhängig davon, wann sie entstanden sind.
 
 ## Spuren nebeneinander
 

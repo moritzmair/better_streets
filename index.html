@@ -168,6 +168,9 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 .linkinfo{flex:1 1 auto;font-size:11.5px;color:var(--ink2)}
 .linkinfo b{color:var(--ink);font-weight:600}
 #rowLink .btn{padding:4px 8px;font-size:12px}
+.chk{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink2);cursor:pointer}
+.chk[hidden]{display:none}
+.chk input{accent-color:var(--accent-bg)}
 #btnUncut{margin-top:2px;padding:4px 8px;font-size:12px;justify-content:center}
 #btnUncut[hidden]{display:none}
 .note{font-size:11.5px;line-height:1.4;color:var(--ink2);margin:-2px 0 10px}
@@ -278,6 +281,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
           <div class="mrow"><span>links</span><select id="markL"></select></div>
           <div class="mrow"><span>Mitte</span><select id="markM"></select></div>
           <div class="mrow"><span>rechts</span><select id="markR"></select></div>
+          <label class="chk" id="rowQZ" hidden><input type="checkbox" id="chkQZ"> Querung über Fahrbahn/Radweg</label>
           <button class="btn" id="btnUncut" hidden>Trennstellen aufheben</button>
         </div>
         <div class="field" id="fieldPar" hidden>
@@ -362,20 +366,20 @@ const MARKS = {
 // Ebenen von hinten nach vorn:
 //   10 Flächen & Grün · 20 Kfz · 30 Rad · 40 Fuß · 50 Markierungsflächen · 60 Überwege · 70 Bäume
 const TYPES = {
-  fahrspur:      {n:'Fahrspur',            g:'Kfz-Verkehr',   geom:'line',   w:3.25, z:22, fill:ASPHALT, kfz:true, mark:{l:'voll', r:'voll'}, r0:6,  rmin:5},
-  fahrspur_eng:  {n:'Fahrspur Tempo 30',   g:'Kfz-Verkehr',   geom:'line',   w:2.75, z:22, fill:ASPHALT, kfz:true, mark:{l:'voll', r:'voll'}, r0:6,  rmin:4},
-  busspur:       {n:'Busspur',             g:'Kfz-Verkehr',   geom:'line',   w:3.50, z:23, fill:'#565a5e', kfz:true, mark:{l:'breit', r:'breit'}, r0:12, rmin:10},
-  parken_laengs: {n:'Parken längs',        g:'Kfz-Verkehr',   geom:'line',   w:2.00, z:20, fill:'#54585c', kfz:true, mark:{l:'voll', r:'voll'}, ticks:5.5, r0:6, rmin:4},
-  parken_quer:   {n:'Parken quer',         g:'Kfz-Verkehr',   geom:'line',   w:5.00, z:20, fill:'#54585c', kfz:true, mark:{l:'voll', r:'voll'}, ticks:2.5, r0:6, rmin:4},
+  fahrspur:      {n:'Fahrspur',            g:'Kfz-Verkehr',   geom:'line', rank:1,   w:3.25, z:22, fill:ASPHALT, kfz:true, mark:{l:'voll', r:'voll'}, r0:6,  rmin:5},
+  fahrspur_eng:  {n:'Fahrspur Tempo 30',   g:'Kfz-Verkehr',   geom:'line', rank:1,   w:2.75, z:22, fill:ASPHALT, kfz:true, mark:{l:'voll', r:'voll'}, r0:6,  rmin:4},
+  busspur:       {n:'Busspur',             g:'Kfz-Verkehr',   geom:'line', rank:1,   w:3.50, z:23, fill:'#565a5e', kfz:true, mark:{l:'breit', r:'breit'}, r0:12, rmin:10},
+  parken_laengs: {n:'Parken längs',        g:'Kfz-Verkehr',   geom:'line', rank:1,   w:2.00, z:20, fill:'#54585c', kfz:true, mark:{l:'voll', r:'voll'}, ticks:5.5, r0:6, rmin:4},
+  parken_quer:   {n:'Parken quer',         g:'Kfz-Verkehr',   geom:'line', rank:1,   w:5.00, z:20, fill:'#54585c', kfz:true, mark:{l:'voll', r:'voll'}, ticks:2.5, r0:6, rmin:4},
 
-  radweg:        {n:'Radweg',              g:'Radverkehr',    geom:'line',   w:2.00, z:32, fill:BIKE, border:{c:'#256240',w:0.08}, r0:10, rmin:2.5},
-  radweg_zwei:   {n:'Radweg 2-Richtung',   g:'Radverkehr',    geom:'line',   w:3.00, z:32, fill:BIKE, border:{c:'#256240',w:0.08}, mark:{mid:'kurz'}, r0:10, rmin:5},
-  radfahrstreif: {n:'Radfahrstreifen',     g:'Radverkehr',    geom:'line',   w:1.85, z:31, fill:BIKE, mark:{l:'breit'}, r0:10, rmin:5},
-  schutzstreif:  {n:'Schutzstreifen',      g:'Radverkehr',    geom:'line',   w:1.50, z:30, fill:'#456855', mark:{l:'kurz'}, r0:10, rmin:5},
-  radstrasse:    {n:'Fahrradstraße',       g:'Radverkehr',    geom:'line',   w:4.50, z:31, fill:'#357f52', border:{c:'#256240',w:0.08}, r0:10, rmin:5},
+  radweg:        {n:'Radweg',              g:'Radverkehr',    geom:'line', rank:2,   w:2.00, z:32, fill:BIKE, border:{c:'#256240',w:0.08}, r0:10, rmin:2.5},
+  radweg_zwei:   {n:'Radweg 2-Richtung',   g:'Radverkehr',    geom:'line', rank:2,   w:3.00, z:32, fill:BIKE, border:{c:'#256240',w:0.08}, mark:{mid:'kurz'}, r0:10, rmin:5},
+  radfahrstreif: {n:'Radfahrstreifen',     g:'Radverkehr',    geom:'line', rank:2,   w:1.85, z:31, fill:BIKE, mark:{l:'breit'}, r0:10, rmin:5},
+  schutzstreif:  {n:'Schutzstreifen',      g:'Radverkehr',    geom:'line', rank:2,   w:1.50, z:30, fill:'#456855', mark:{l:'kurz'}, r0:10, rmin:5},
+  radstrasse:    {n:'Fahrradstraße',       g:'Radverkehr',    geom:'line', rank:2,   w:4.50, z:31, fill:'#357f52', border:{c:'#256240',w:0.08}, r0:10, rmin:5},
 
-  gehweg:        {n:'Gehweg',              g:'Fußverkehr',    geom:'line',   w:2.50, z:40, fill:WALK, border:{c:'#a89e8f',w:0.10}, r0:3, rmin:1.5},
-  gehweg_breit:  {n:'Gehweg breit',        g:'Fußverkehr',    geom:'line',   w:4.00, z:40, fill:WALK, border:{c:'#a89e8f',w:0.10}, r0:3, rmin:1.5},
+  gehweg:        {n:'Gehweg',              g:'Fußverkehr',    geom:'line', rank:3,   w:2.50, z:40, fill:WALK, border:{c:'#a89e8f',w:0.10}, r0:3, rmin:1.5},
+  gehweg_breit:  {n:'Gehweg breit',        g:'Fußverkehr',    geom:'line', rank:3,   w:4.00, z:40, fill:WALK, border:{c:'#a89e8f',w:0.10}, r0:3, rmin:1.5},
   zebra:         {n:'Fußgängerüberweg',    g:'Fußverkehr',    geom:'line',   w:4.00, z:60, fill:'#ffffff', render:'zebra', maxPts:2, sw:'#f2f2f2'},
   aufenthalt:    {n:'Aufenthaltsfläche',   g:'Fußverkehr',    geom:'area',   z:11, fill:'#918b81', border:{c:'#6f6a62',w:0.15}, r0:2},
 
@@ -384,7 +388,7 @@ const TYPES = {
   insel:         {n:'Verkehrsinsel',       g:'Grün & Flächen',geom:'area',   z:50, fill:'#a7a297', border:{c:MARK,w:0.15}, cv0:'bogen', r0:1.5},
   baum:          {n:'Baum',                g:'Grün & Flächen',geom:'point',  r:3.0, z:70, fill:'#4f7d3e', sw:'#4f7d3e'},
 
-  kreisel:       {n:'Kreisverkehr',        g:'Knotenpunkt',   geom:'circle', w:6.00, r:12, z:21, fill:ASPHALT, sw:ASPHALT},
+  kreisel:       {n:'Kreisverkehr',        g:'Knotenpunkt',   geom:'circle', w:6.00, r:12, z:24, fill:ASPHALT, sw:ASPHALT},
   sperrflaeche:  {n:'Sperrfläche',         g:'Knotenpunkt',   geom:'area',   z:51, fill:ASPHALT, border:{c:MARK,w:0.15}, hatch:2.0, cv0:'bogen', r0:0.5},
 };
 
@@ -406,6 +410,7 @@ let draft = null;
 let sel = null;
 let showGrid = false, hideDesign = false, checkRadii = true;
 let renderScale = 1;   // Welt→Bildschirm, für pixelgenaue Überlappung
+let crossMap = {}, maskMap = {};   // Querungen und Kreisverkehrs-Masken je Element
 let scalePts = [];
 let snapMark = null, cursor = null;
 let selSeg = 0, ext = null, badgeHits = [];
@@ -559,6 +564,114 @@ function splineGeom(raw, closed){
   }
   out.push(closed ? raw[0] : raw[n-1]);
   return {pts:out, corners:[]};
+}
+
+// Weg in gleichmäßigen Schritten abtasten
+function resample(P, step){
+  const {seg, total} = pathParts(P);
+  if (!total || P.length < 2) return {pts:P.slice(), u:P.map(()=>0)};
+  const pts = [], u = [];
+  let target = 0, acc = 0, i = 0;
+  while (target < total){
+    while (i < P.length-1 && acc + seg[i] < target){ acc += seg[i]; i++; }
+    if (i >= P.length-1) break;
+    const f = seg[i] ? (target-acc)/seg[i] : 0;
+    pts.push({x:P[i].x + (P[i+1].x-P[i].x)*f, y:P[i].y + (P[i+1].y-P[i].y)*f});
+    u.push(target/total);
+    target += step;
+  }
+  pts.push({x:P[P.length-1].x, y:P[P.length-1].y}); u.push(1);
+  return {pts, u};
+}
+
+function bboxOf(P, pad){
+  let x0=Infinity, y0=Infinity, x1=-Infinity, y1=-Infinity;
+  for (const p of P){
+    x0=Math.min(x0,p.x); y0=Math.min(y0,p.y); x1=Math.max(x1,p.x); y1=Math.max(y1,p.y);
+  }
+  return {x0:x0-pad, y0:y0-pad, x1:x1+pad, y1:y1+pad};
+}
+
+// Abschnitte, in denen ein Weg eine rangniedrigere Anlage überquert
+function crossingsFor(el){
+  const T = TYPES[el.t];
+  if (!T.rank || T.rank < 2 || T.render === 'zebra' || el.qz === false) return null;
+  const S = shape(el).pts;
+  if (S.length < 2) return null;
+  const R = resample(S, Math.max(0.25*ppm, 2));
+  const flags = new Array(R.pts.length).fill(false);
+  let any = false;
+  for (const o of elements){
+    if (o === el) continue;
+    const OT = TYPES[o.t];
+    if (!OT.rank || OT.rank >= T.rank || OT.render === 'zebra') continue;
+    const O = shape(o).pts;
+    if (O.length < 2) continue;
+    const half = (o.w ?? OT.w)*ppm/2;
+    const bb = bboxOf(O, half);
+    for (let i = 0; i < R.pts.length; i++){
+      const p = R.pts[i];
+      if (flags[i] || p.x < bb.x0 || p.x > bb.x1 || p.y < bb.y0 || p.y > bb.y1) continue;
+      for (let j = 0; j < O.length-1; j++){
+        if (distToSeg(p, O[j], O[j+1]) < half){ flags[i] = true; any = true; break; }
+      }
+    }
+  }
+  if (!any) return null;
+  const iv = [];
+  let start = null;
+  for (let i = 0; i < flags.length; i++){
+    if (flags[i] && start === null) start = i;
+    if (!flags[i] && start !== null){ iv.push([R.u[start], R.u[i-1]]); start = null; }
+  }
+  if (start !== null) iv.push([R.u[start], R.u[flags.length-1]]);
+  const out = iv.filter(([a,b]) => b - a > 0.001);
+  return out.length ? out : null;
+}
+
+// Abschnitte innerhalb eines Kreisverkehrs – dort hören die Markierungen auf
+function maskFor(el){
+  const T = TYPES[el.t];
+  if (T.geom !== 'line' || T.render === 'zebra') return null;
+  const rings = elements.filter(o => TYPES[o.t].geom === 'circle');
+  if (!rings.length) return null;
+  const S = shape(el).pts;
+  if (S.length < 2) return null;
+  const R = resample(S, Math.max(0.25*ppm, 2));
+  const flags = new Array(R.pts.length).fill(false);
+  let any = false;
+  for (const o of rings){
+    const c = o.pts[0], rad = (o.r ?? TYPES[o.t].r)*ppm;
+    for (let i = 0; i < R.pts.length; i++){
+      if (flags[i]) continue;
+      if (dist(R.pts[i], c) <= rad){ flags[i] = true; any = true; }
+    }
+  }
+  if (!any) return null;
+  const iv = []; let start = null;
+  for (let i = 0; i < flags.length; i++){
+    if (flags[i] && start === null) start = i;
+    if (!flags[i] && start !== null){ iv.push([R.u[start], R.u[i-1]]); start = null; }
+  }
+  if (start !== null) iv.push([R.u[start], R.u[flags.length-1]]);
+  const out = iv.filter(([a,b]) => b - a > 0.001);
+  return out.length ? out : null;
+}
+
+// Weg an Intervallgrenzen zerlegen, mit Kennzeichnung innen/außen
+function splitFlagged(P, ivals){
+  const cuts = [];
+  for (const [a,b] of ivals) cuts.push(a, b);
+  const secs = splitPath(P, cuts);
+  const total = pathParts(P).total || 1;
+  const out = []; let acc = 0;
+  for (const sc of secs){
+    const l = pathParts(sc).total;
+    const mid = (acc + l/2)/total;
+    acc += l;
+    out.push({pts:sc, inside: ivals.some(([a,b]) => mid >= a && mid <= b)});
+  }
+  return out;
 }
 
 // Gezeichnete Linie eines Elements (gesampelt)
@@ -752,12 +865,22 @@ function drawMarkLine(g, P, style){
   g.setLineDash([]);
 }
 
-// Markierung einer Seite, abschnittsweise
+// Markierung einer Seite: abschnittsweise, ausgespart in Querungen und Kreisverkehren
 function drawMark(g, el, S, off, side){
   if (S.length < 2) return;
   const P = off ? offsetPoly(S, off, false) : S;
-  const secs = splitPath(P, el.cuts);
-  for (let i = 0; i < secs.length; i++) drawMarkLine(g, secs[i], markOf(el, side, i));
+  const skip = (crossMap[el.id] || []).concat(maskMap[el.id] || []);
+  const cuts = (el.cuts || []).concat(skip.flat());
+  const secs = splitPath(P, cuts);
+  const total = pathParts(P).total || 1;
+  let acc = 0;
+  for (const sc of secs){
+    const l = pathParts(sc).total;
+    const mid = (acc + l/2)/total;
+    acc += l;
+    if (skip.some(([a,b]) => mid >= a && mid <= b)) continue;
+    drawMarkLine(g, sc, markOf(el, side, segAt(el, mid)));
+  }
 }
 
 // Stellplatzteiler quer zur Fahrtrichtung
@@ -810,58 +933,94 @@ function markOf(el, side, seg){
   return el[key] ?? (T.mark ? (T.mark[side === 'mid' ? 'mid' : side] ?? '') : '');
 }
 
+function paintBand(g, P, T, w){
+  if (P.length < 2) return;
+  if (T.border){
+    g.setLineDash(T.border.dash ? T.border.dash.map(v=>v*ppm) : []);
+    g.lineWidth = w + 2*T.border.w*ppm;
+    g.strokeStyle = T.border.c;
+    poly(g, P); g.stroke();
+    g.setLineDash([]);
+  }
+  g.lineWidth = w + 0.7/renderScale;   // Haaransatz zwischen Nachbarspuren vermeiden
+  g.strokeStyle = T.fill;
+  poly(g, P); g.stroke();
+}
+
+// Querung über eine rangniedrigere Anlage: Furt oder Zebrastreifen statt Belag
+function drawCrossing(g, P, T, w){
+  if (P.length < 2) return;
+  if (T.rank >= 3){ zebraBars(g, P, w); return; }
+  g.lineCap = 'butt';
+  g.lineWidth = Math.max(0.25*ppm, 0.8);
+  g.strokeStyle = MARK;
+  g.setLineDash([0.5*ppm, 0.5*ppm]);
+  for (const off of [w/2, -w/2]){ poly(g, offsetPoly(P, off, false)); g.stroke(); }
+  g.setLineDash([]);
+}
+
 function drawBand(g, el, T){
   if (el.pts.length < 2) return;
   const S = shape(el).pts;
   const w = (el.w ?? T.w) * ppm;
   g.lineJoin = 'round'; g.lineCap = 'butt';
-  if (T.border){
-    g.setLineDash(T.border.dash ? T.border.dash.map(v=>v*ppm) : []);
-    g.lineWidth = w + 2*T.border.w*ppm;
-    g.strokeStyle = T.border.c;
-    poly(g, S); g.stroke();
-    g.setLineDash([]);
-  }
-  g.lineWidth = w + 0.7/renderScale;   // Haaransatz zwischen Nachbarspuren vermeiden
-  g.strokeStyle = T.fill;
-  poly(g, S); g.stroke();
+  const cross = crossMap[el.id];
+  if (cross){
+    for (const part of splitFlagged(S, cross)){
+      if (part.inside) drawCrossing(g, part.pts, T, w);
+      else paintBand(g, part.pts, T, w);
+    }
+  } else paintBand(g, S, T, w);
   if (T.ticks) drawTicks(g, S, w, T.ticks);
   drawMark(g, el, S,  w/2, 'l');
   drawMark(g, el, S, -w/2, 'r');
   drawMark(g, el, S,  0,   'mid');
 }
 
+// Punkt und Normale bei Bogenlänge d
+function atLen(P, seg, d){
+  let acc = 0;
+  for (let i = 0; i < P.length-1; i++){
+    const l = seg[i] || 0;
+    if (acc + l >= d || i === P.length-2){
+      const f = l ? Math.max(0, Math.min(1, (d-acc)/l)) : 0;
+      const a = P[i], b = P[i+1], len = l || 1;
+      return {x:a.x + (b.x-a.x)*f, y:a.y + (b.y-a.y)*f,
+              nx:-(b.y-a.y)/len, ny:(b.x-a.x)/len};
+    }
+    acc += l;
+  }
+  return {x:P[0].x, y:P[0].y, nx:0, ny:0};
+}
+
+// Zebrastreifen: gleichmäßig über die Bogenlänge, auch in Kurven
+function zebraBars(g, S, w){
+  if (S.length < 2) return;
+  const bar = 0.5*ppm, gap = 0.5*ppm, step = bar + gap;
+  const {seg, total} = pathParts(S);
+  if (!total) return;
+  const n = Math.max(1, Math.floor((total + gap)/step));
+  const start = (total - (n*bar + (n-1)*gap))/2;
+  g.fillStyle = '#f4f2ec';
+  for (let i = 0; i < n; i++){
+    const a = atLen(S, seg, start + i*step);
+    const b = atLen(S, seg, start + i*step + bar);
+    g.beginPath();
+    g.moveTo(a.x - a.nx*w/2, a.y - a.ny*w/2);
+    g.lineTo(a.x + a.nx*w/2, a.y + a.ny*w/2);
+    g.lineTo(b.x + b.nx*w/2, b.y + b.ny*w/2);
+    g.lineTo(b.x - b.nx*w/2, b.y - b.ny*w/2);
+    g.closePath(); g.fill();
+  }
+}
+
 function drawZebra(g, el, T){
   if (el.pts.length < 2) return;
   const w = (el.w ?? T.w) * ppm;          // Tiefe des Überwegs, längs der Fahrbahn
-  const bar = 0.5*ppm, gap = 0.5*ppm;     // Streifen 0,5 m, Lücke 0,5 m
-  const S = el.pts;
   g.lineJoin = 'round'; g.lineCap = 'butt';
   g.globalAlpha = 0.75; g.lineWidth = w; g.strokeStyle = ASPHALT;
-  poly(g, S); g.stroke(); g.globalAlpha = 1;
-
-  // Streifen quer zur Gehrichtung, also parallel zur Fahrbahnachse
-  const step = bar + gap;
-  g.fillStyle = '#f4f2ec';
-  for (let s2 = 0; s2 < S.length-1; s2++){
-    const a2 = S[s2], b2 = S[s2+1], len = dist(a2, b2);
-    if (len < 0.001) continue;
-    const dx = (b2.x-a2.x)/len, dy = (b2.y-a2.y)/len;
-    const nx = -dy, ny = dx;
-    const n = Math.max(1, Math.floor((len + gap)/step));
-    const start = (len - (n*bar + (n-1)*gap))/2;
-    for (let i = 0; i < n; i++){
-      const o1 = start + i*step, o2 = o1 + bar;
-      const c1 = {x:a2.x + dx*o1, y:a2.y + dy*o1};
-      const c2 = {x:a2.x + dx*o2, y:a2.y + dy*o2};
-      g.beginPath();
-      g.moveTo(c1.x - nx*w/2, c1.y - ny*w/2);
-      g.lineTo(c1.x + nx*w/2, c1.y + ny*w/2);
-      g.lineTo(c2.x + nx*w/2, c2.y + ny*w/2);
-      g.lineTo(c2.x - nx*w/2, c2.y - ny*w/2);
-      g.closePath(); g.fill();
-    }
-  }
+  poly(g, el.pts); g.stroke(); g.globalAlpha = 1;
+  zebraBars(g, el.pts, w);
 }
 
 function drawArea(g, el, T){
@@ -876,6 +1035,19 @@ function drawArea(g, el, T){
   }
 }
 
+// Liegt der Punkt auf einer Kfz-Fahrbahn?
+function onCarriageway(p){
+  for (const o of elements){
+    const OT = TYPES[o.t];
+    if (OT.geom !== 'line' || !OT.rank || OT.rank > 1 || OT.render === 'zebra') continue;
+    const O = shape(o).pts;
+    if (O.length < 2) continue;
+    const half = (o.w ?? OT.w)*ppm/2;
+    for (let j = 0; j < O.length-1; j++) if (distToSeg(p, O[j], O[j+1]) < half) return true;
+  }
+  return false;
+}
+
 function drawCircleEl(g, el, T){
   const R = (el.r ?? T.r) * ppm, w = (el.w ?? T.w) * ppm;
   const c = el.pts[0];
@@ -884,8 +1056,22 @@ function drawCircleEl(g, el, T){
   g.fillStyle = GREEN; g.fill();
   g.beginPath(); g.arc(c.x, c.y, Math.max(R-w/2, 0.1), 0, Math.PI*2);
   g.lineWidth = w; g.strokeStyle = ASPHALT; g.stroke();
-  g.lineWidth = 0.12*ppm; g.strokeStyle = MARK;
-  g.beginPath(); g.arc(c.x, c.y, R, 0, Math.PI*2); g.stroke();
+
+  // Außenlinie, an den Zufahrten unterbrochen
+  const steps = 240;
+  g.lineWidth = Math.max(0.12*ppm, 0.6); g.strokeStyle = MARK; g.lineCap = 'butt';
+  let run = null;
+  for (let i = 0; i <= steps; i++){
+    const a = i/steps * Math.PI*2;
+    const p = {x:c.x + Math.cos(a)*R, y:c.y + Math.sin(a)*R};
+    if (onCarriageway(p)){
+      if (run && run.length > 1){ poly(g, run); g.stroke(); }
+      run = null;
+    } else {
+      (run = run || []).push(p);
+    }
+  }
+  if (run && run.length > 1){ poly(g, run); g.stroke(); }
 }
 
 function drawPointEl(g, el, T){
@@ -910,6 +1096,11 @@ function drawElement(g, el){
 function renderScene(g){
   if (img){ g.globalAlpha = imgOpacity; g.drawImage(img, 0, 0); g.globalAlpha = 1; }
   if (hideDesign) return;
+  crossMap = {}; maskMap = {};
+  for (const el of elements){
+    const c = crossingsFor(el); if (c) crossMap[el.id] = c;
+    const m = maskFor(el);      if (m) maskMap[el.id] = m;
+  }
   const sorted = elements.slice().sort((a,b)=>TYPES[a.t].z - TYPES[b.t].z);
   for (const el of sorted) drawElement(g, el);
 }
@@ -961,6 +1152,8 @@ function draw(){
 
   // Entwurf in Arbeit
   if (draft){
+    const dc = crossingsFor(draft); if (dc) crossMap[draft.id] = dc;
+    const dm = maskFor(draft);      if (dm) maskMap[draft.id] = dm;
     ctx.globalAlpha = 0.75; drawElement(ctx, draft); ctx.globalAlpha = 1;
     ctx.lineWidth = 1.5/view.k; ctx.strokeStyle = cssv('--accent-bg');
     if (draft.pts.length > 1 && TYPES[draft.t].geom !== 'circle'){ poly(ctx, draft.pts); ctx.stroke(); }
@@ -1725,6 +1918,9 @@ function syncInspector(){
         '<option value="'+k+'"'+(k===cur?' selected':'')+'>'+m2+'</option>').join('');
     }
     document.getElementById('btnUncut').hidden = !(el.cuts && el.cuts.length);
+    const qz = document.getElementById('rowQZ');
+    qz.hidden = !(T.rank >= 2);
+    document.getElementById('chkQZ').checked = el.qz !== false;
   }
   ins.fp.hidden = !(T.geom === 'line' && T.render !== 'zebra' && el.pts.length >= 2);
   ins.rowLink.hidden = !el.par;
@@ -1786,6 +1982,12 @@ ins.type.addEventListener('change', e=>{
   if (nt.geom === 'line' || nt.geom === 'circle') el.w = nt.w;
   if (nt.r0 !== undefined && el.cr === undefined) el.cr = nt.r0;
   syncInspector(); draw();
+});
+document.getElementById('chkQZ').addEventListener('change', e=>{
+  const el = elements.find(x=>x.id===sel); if (!el) return;
+  pushHistory();
+  if (e.target.checked) delete el.qz; else el.qz = false;
+  draw();
 });
 document.getElementById('btnUncut').addEventListener('click', ()=>{
   const el = elements.find(x=>x.id===sel); if (!el || !el.cuts) return;
