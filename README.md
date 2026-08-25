@@ -66,6 +66,9 @@ breit durchgezogen (0,25 m). Vorbelegt nach Typ:
 | Radweg 2-Richtung | Mittellinie gestrichelt kurz |
 | Gehweg, Grünstreifen, Radweg | keine |
 
+Radverkehrsanlagen lassen sich im Inspektor zwischen **grüner und roter Einfärbung**
+umschalten; die Wahl wird zur Vorgabe für neue Anlagen und färbt auch die Werkzeugleiste um.
+
 Parkstreifen bekommen Stellplatzteiler (quer 2,5 m, längs 5,5 m), die Sperrfläche
 eine Schraffur. Der Fußgängerüberweg wird von Bordstein zu Bordstein gezeichnet; seine
 Streifen liegen quer zur Gehrichtung, also parallel zur Fahrbahnachse, und sind 4 m tief.
@@ -97,6 +100,21 @@ Anlage, wird die Überlappung automatisch als Querung gezeichnet statt als eigen
 Die Randmarkierungen des querenden Wegs setzen dort aus. Erkannt wird die Überlappung
 geometrisch, also auch bei Kurven und schrägen Querungen. Pro Element abschaltbar über
 „Querung über Fahrbahn/Radweg" im Inspektor – dann wird wieder durchgehend Belag gezeichnet.
+
+## Kreuzungen
+
+Kreuzen sich zwei Anlagen desselben Rangs (zwei Fahrbahnen, zwei Radwege) in einem Winkel
+über etwa 20°, gilt die Überlappung als Knotenpunkt: dort hören alle Randmarkierungen und
+Leitlinien beider Wege auf, die Fläche bleibt durchgehender Belag. Das gilt auch für
+gekoppelte Spurenpaare - die Naht zwischen zwei Spuren reißt die Maske nicht auf.
+Parallel geführte Spuren sind nicht betroffen; erst der Winkel macht die Kreuzung aus.
+
+## Halte- und Wartelinie
+
+Das Werkzeug **Halte-/Wartelinie** setzt eine Querlinie auf eine Fahr-, Bus- oder Radspur:
+Klick auf die Spur genügt, die Linie liegt quer über ihre volle Breite. Im Inspektor
+umschaltbar zwischen Haltlinie (durchgezogen, 0,5 m) und Wartelinie (unterbrochen).
+Wie der Pfeil hängt sie an ihrer Spur, lässt sich auf ihr verschieben und verschwindet mit ihr.
 
 ## Kreisverkehr
 
@@ -149,6 +167,7 @@ Die Kopplung löst sich, sobald du einen Punkt der Nachbarspur ziehst – ab da 
 | Winkel einrasten (15°) | `Umschalt` beim Zeichnen |
 | Fang aussetzen | `Alt` |
 | Vorher/Nachher | `H` |
+| Ansicht einpassen | Knopf *Alles zeigen* |
 
 Endpunkte fangen automatisch an vorhandenen Punkten – so schließen Fahrbahnen bündig an.
 Der Stand wird laufend im Browser (localStorage) gesichert, inklusive Luftbild bis ca. 3,5 MB.

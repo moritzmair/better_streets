@@ -275,6 +275,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 
   <div class="grp right">
     <label class="rangelabel">Luftbild<input type="range" id="imgOpacity" min="15" max="100" value="100" title="Deckkraft des Luftbilds"></label>
+    <button class="btn icon" id="btnFit" title="Ansicht auf den Entwurf einpassen">Alles zeigen</button>
     <button class="btn icon" id="btnGrid" title="Raster (5 m) ein/aus">Raster</button>
     <button class="btn icon on" id="btnCheck" title="Zu enge Kurvenradien markieren">Radien</button>
     <button class="btn icon" id="btnCompare" title="Entwurf ausblenden – Vorher/Nachher">Vorher</button>
@@ -337,6 +338,20 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
         <div class="field" id="fieldType" hidden>
           <label>Typ</label>
           <select id="insType"></select>
+        </div>
+        <div class="field" id="fieldCol" hidden>
+          <label>Einfärbung</label>
+          <div class="seg" id="segCol">
+            <button type="button" data-col="gruen">Grün</button>
+            <button type="button" data-col="rot">Rot</button>
+          </div>
+        </div>
+        <div class="field" id="fieldBar" hidden>
+          <label>Linie</label>
+          <div class="seg" id="segBar">
+            <button type="button" data-bar="halt">Haltlinie</button>
+            <button type="button" data-bar="warte">Wartelinie</button>
+          </div>
         </div>
         <div class="field" id="fieldArrow" hidden>
           <label>Pfeil</label>
@@ -453,6 +468,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 const ASPHALT = '#4b4f53';
 const MARK    = '#e9e6df';
 const BIKE    = '#2f7d4b';
+const BIKE_R  = '#9c4a3a';   // rote Einfärbung als Alternative
 const WALK    = '#cbc4b7';
 const GREEN   = '#5d8a49';
 
@@ -466,6 +482,12 @@ const ARROWS = {
   links_rechts:  'links + rechts',
 };
 let lastArrow = 'gerade';
+let lastBar = 'halt';
+let bikeCol = 'gruen';   // Vorgabe für neue Radverkehrsanlagen
+
+// Farbe eines Elements: grün oder rot eingefärbt
+function fillOf(el, T){ return (el.col === 'rot' && T.alt) ? T.alt.fill : T.fill; }
+function borderOf(el, T){ return (el.col === 'rot' && T.alt && T.alt.border) ? T.alt.border : T.border; }
 
 // Fahrbahnmarkierungen – Strich/Lücke und Breite in Metern
 const MARKS = {
@@ -486,12 +508,13 @@ const TYPES = {
   parken_quer:   {n:'Parken quer',         g:'Kfz-Verkehr',   geom:'line', rank:1,   w:5.00, z:20, fill:'#54585c', kfz:true, mark:{l:'voll', r:'voll'}, ticks:2.5, r0:6, rmin:4},
 
   pfeil:         {n:'Fahrtrichtungspfeil',g:'Kfz-Verkehr',   geom:'arrow',  z:25, fill:MARK, sw:MARK},
+  haltlinie:     {n:'Halte-/Wartelinie',   g:'Kfz-Verkehr',   geom:'bar',    z:25, fill:MARK, sw:MARK},
 
-  radweg:        {n:'Radweg',              g:'Radverkehr',    geom:'line', rank:2,   w:2.00, z:32, fill:BIKE, border:{c:'#256240',w:0.08}, r0:10, rmin:2.5},
-  radweg_zwei:   {n:'Radweg 2-Richtung',   g:'Radverkehr',    geom:'line', rank:2,   w:3.00, z:32, fill:BIKE, border:{c:'#256240',w:0.08}, mark:{mid:'kurz'}, r0:10, rmin:5},
-  radfahrstreif: {n:'Radfahrstreifen',     g:'Radverkehr',    geom:'line', rank:2,   w:1.85, z:31, fill:BIKE, mark:{l:'breit'}, r0:10, rmin:5},
-  schutzstreif:  {n:'Schutzstreifen',      g:'Radverkehr',    geom:'line', rank:2,   w:1.50, z:30, fill:'#456855', mark:{l:'kurz'}, r0:10, rmin:5},
-  radstrasse:    {n:'Fahrradstraße',       g:'Radverkehr',    geom:'line', rank:2,   w:4.50, z:31, fill:'#357f52', border:{c:'#256240',w:0.08}, r0:10, rmin:5},
+  radweg:        {n:'Radweg',              g:'Radverkehr',    geom:'line', rank:2,   w:2.00, z:32, fill:BIKE, border:{c:'#256240',w:0.08}, alt:{fill:BIKE_R, border:{c:'#7a382c',w:0.08}}, r0:10, rmin:2.5},
+  radweg_zwei:   {n:'Radweg 2-Richtung',   g:'Radverkehr',    geom:'line', rank:2,   w:3.00, z:32, fill:BIKE, border:{c:'#256240',w:0.08}, alt:{fill:BIKE_R, border:{c:'#7a382c',w:0.08}}, mark:{mid:'kurz'}, r0:10, rmin:5},
+  radfahrstreif: {n:'Radfahrstreifen',     g:'Radverkehr',    geom:'line', rank:2,   w:1.85, z:31, fill:BIKE, alt:{fill:BIKE_R}, mark:{l:'breit'}, r0:10, rmin:5},
+  schutzstreif:  {n:'Schutzstreifen',      g:'Radverkehr',    geom:'line', rank:2,   w:1.50, z:30, fill:'#456855', alt:{fill:'#6b4a42'}, mark:{l:'kurz'}, r0:10, rmin:5},
+  radstrasse:    {n:'Fahrradstraße',       g:'Radverkehr',    geom:'line', rank:2,   w:4.50, z:31, fill:'#357f52', border:{c:'#256240',w:0.08}, alt:{fill:'#8b4234', border:{c:'#7a382c',w:0.08}}, r0:10, rmin:5},
 
   gehweg:        {n:'Gehweg',              g:'Fußverkehr',    geom:'line', rank:3,   w:2.50, z:40, fill:WALK, border:{c:'#a89e8f',w:0.10}, r0:3, rmin:1.5},
   gehweg_breit:  {n:'Gehweg breit',        g:'Fußverkehr',    geom:'line', rank:3,   w:4.00, z:40, fill:WALK, border:{c:'#a89e8f',w:0.10}, r0:3, rmin:1.5},
@@ -560,7 +583,7 @@ const rail = document.getElementById('rail');
       const label = T.geom==='line' ? fmt(T.w)+' m'
                   : T.geom==='circle' ? 'ø '+fmt1(T.r*2)+' m'
                   : T.geom==='point' ? 'ø '+fmt1(T.r*2)+' m'
-                  : T.geom==='arrow' ? 'auf Spur' : 'Fläche';
+                  : (T.geom==='arrow' || T.geom==='bar') ? 'auf Spur' : 'Fläche';
       w.appendChild(toolBtn(id, T.n, label, T.sw||T.fill));
     }
     s.appendChild(w); rail.appendChild(s);
@@ -575,6 +598,15 @@ function toolBtn(id,name,width,color){
               + '<span class="wd mono">'+width+'</span>';
   b.addEventListener('click', ()=>setTool(id));
   return b;
+}
+
+function refreshSwatches(){
+  for (const b of document.querySelectorAll('.tool')){
+    const T = TYPES[b.dataset.tool];
+    if (!T || !T.alt) continue;
+    const sw = b.querySelector('.sw');
+    if (sw) sw.style.background = bikeCol === 'rot' ? T.alt.fill : T.fill;
+  }
 }
 
 function setTool(t){
@@ -708,6 +740,17 @@ function bboxOf(P, pad){
   return {x0:x0-pad, y0:y0-pad, x1:x1+pad, y1:y1+pad};
 }
 
+// Intervalle zusammenfassen, die nur durch eine Naht getrennt sind
+function mergeIv(iv, minGap){
+  const out = [];
+  for (const v of iv){
+    const last = out[out.length-1];
+    if (last && v[0] - last[1] <= minGap) last[1] = v[1];
+    else out.push([v[0], v[1]]);
+  }
+  return out;
+}
+
 // Abschnitte, in denen ein Weg eine rangniedrigere Anlage überquert
 function crossingsFor(el){
   const T = TYPES[el.t];
@@ -729,11 +772,16 @@ function crossingsFor(el){
       const p = R.pts[i];
       if (flags[i] || p.x < bb.x0 || p.x > bb.x1 || p.y < bb.y0 || p.y > bb.y1) continue;
       for (let j = 0; j < O.length-1; j++){
-        if (distToSeg(p, O[j], O[j+1]) < half){ flags[i] = true; any = true; break; }
+        if (distToSeg(p, O[j], O[j+1]) <= half + 0.06*ppm){ flags[i] = true; any = true; break; }
       }
     }
   }
   if (!any) return null;
+  return intervals(flags, R, S);
+}
+
+// Aus gesetzten Marken zusammenhängende Intervalle machen
+function intervals(flags, R, S){
   const iv = [];
   let start = null;
   for (let i = 0; i < flags.length; i++){
@@ -741,16 +789,20 @@ function crossingsFor(el){
     if (!flags[i] && start !== null){ iv.push([R.u[start], R.u[i-1]]); start = null; }
   }
   if (start !== null) iv.push([R.u[start], R.u[flags.length-1]]);
-  const out = iv.filter(([a,b]) => b - a > 0.001);
+  const total = pathParts(S).total || 1;
+  const merged = mergeIv(iv, (1.4*ppm)/total);
+  const out = merged.filter(([a,b]) => b - a > 0.001);
   return out.length ? out : null;
 }
 
-// Abschnitte innerhalb eines Kreisverkehrs – dort hören die Markierungen auf
+// Abschnitte, in denen Markierungen aufhören: Kreisverkehr und Kreuzungsfläche
 function maskFor(el){
   const T = TYPES[el.t];
   if (T.geom !== 'line' || T.render === 'zebra') return null;
   const rings = elements.filter(o => TYPES[o.t].geom === 'circle');
-  if (!rings.length) return null;
+  const peers = T.rank ? elements.filter(o => o !== el && TYPES[o.t].geom === 'line'
+    && TYPES[o.t].rank === T.rank && TYPES[o.t].render !== 'zebra') : [];
+  if (!rings.length && !peers.length) return null;
   const S = shape(el).pts;
   if (S.length < 2) return null;
   const R = resample(S, Math.max(0.25*ppm, 2));
@@ -763,15 +815,28 @@ function maskFor(el){
       if (dist(R.pts[i], c) <= rad){ flags[i] = true; any = true; }
     }
   }
-  if (!any) return null;
-  const iv = []; let start = null;
-  for (let i = 0; i < flags.length; i++){
-    if (flags[i] && start === null) start = i;
-    if (!flags[i] && start !== null){ iv.push([R.u[start], R.u[i-1]]); start = null; }
+  // Kreuzende Anlage gleichen Rangs: ab etwa 20° Winkel gilt die Fläche als Knoten
+  for (const o of peers){
+    const O = shape(o).pts;
+    if (O.length < 2) continue;
+    const half = (o.w ?? TYPES[o.t].w)*ppm/2;
+    const bb = bboxOf(O, half);
+    for (let i = 0; i < R.pts.length; i++){
+      const p = R.pts[i];
+      if (flags[i] || p.x < bb.x0 || p.x > bb.x1 || p.y < bb.y0 || p.y > bb.y1) continue;
+      const a = R.pts[Math.max(i-1, 0)], b = R.pts[Math.min(i+1, R.pts.length-1)];
+      const ul = Math.hypot(b.x-a.x, b.y-a.y) || 1;
+      const ux = (b.x-a.x)/ul, uy = (b.y-a.y)/ul;
+      for (let j = 0; j < O.length-1; j++){
+        if (distToSeg(p, O[j], O[j+1]) > half + 0.06*ppm) continue;
+        const vl = Math.hypot(O[j+1].x-O[j].x, O[j+1].y-O[j].y) || 1;
+        const vx = (O[j+1].x-O[j].x)/vl, vy = (O[j+1].y-O[j].y)/vl;
+        if (Math.abs(ux*vy - uy*vx) > 0.34){ flags[i] = true; any = true; break; }
+      }
+    }
   }
-  if (start !== null) iv.push([R.u[start], R.u[flags.length-1]]);
-  const out = iv.filter(([a,b]) => b - a > 0.001);
-  return out.length ? out : null;
+  if (!any) return null;
+  return intervals(flags, R, S);
 }
 
 // Weg an Intervallgrenzen zerlegen, mit Kennzeichnung innen/außen
@@ -1049,17 +1114,18 @@ function markOf(el, side, seg){
   return el[key] ?? (T.mark ? (T.mark[side === 'mid' ? 'mid' : side] ?? '') : '');
 }
 
-function paintBand(g, P, T, w){
+function paintBand(g, P, T, w, el){
   if (P.length < 2) return;
-  if (T.border){
-    g.setLineDash(T.border.dash ? T.border.dash.map(v=>v*ppm) : []);
-    g.lineWidth = w + 2*T.border.w*ppm;
-    g.strokeStyle = T.border.c;
+  const bd = el ? borderOf(el, T) : T.border;
+  if (bd){
+    g.setLineDash(bd.dash ? bd.dash.map(v=>v*ppm) : []);
+    g.lineWidth = w + 2*bd.w*ppm;
+    g.strokeStyle = bd.c;
     poly(g, P); g.stroke();
     g.setLineDash([]);
   }
   g.lineWidth = w + 0.7/renderScale;   // Haaransatz zwischen Nachbarspuren vermeiden
-  g.strokeStyle = T.fill;
+  g.strokeStyle = el ? fillOf(el, T) : T.fill;
   poly(g, P); g.stroke();
 }
 
@@ -1084,9 +1150,9 @@ function drawBand(g, el, T){
   if (cross){
     for (const part of splitFlagged(S, cross)){
       if (part.inside) drawCrossing(g, part.pts, T, w);
-      else paintBand(g, part.pts, T, w);
+      else paintBand(g, part.pts, T, w, el);
     }
-  } else paintBand(g, S, T, w);
+  } else paintBand(g, S, T, w, el);
   if (T.ticks) drawTicks(g, S, w, T.ticks);
   drawMark(g, el, S,  w/2, 'l');
   drawMark(g, el, S, -w/2, 'r');
@@ -1143,7 +1209,7 @@ function drawArea(g, el, T){
   if (el.pts.length < 3) return;
   const S = shape(el).pts;
   poly(g, S, true);
-  g.fillStyle = T.fill; g.fill();
+  g.fillStyle = fillOf(el, T); g.fill();
   if (T.hatch) drawHatch(g, S, T.hatch);
   if (T.border){
     poly(g, S, true);
@@ -1260,6 +1326,26 @@ function drawArrow(g, el, T){
   g.restore();
 }
 
+// Halte- und Wartelinie quer über die Spur
+function drawBar(g, el, T){
+  const p = el.pts && el.pts[0];
+  if (!p) return;
+  const w = (el.hw ?? 3.25)*ppm, th = 0.5*ppm;
+  g.save();
+  g.translate(p.x, p.y);
+  g.rotate(el.a ?? 0);
+  g.fillStyle = MARK;
+  if ((el.kind || 'halt') === 'halt'){
+    g.fillRect(-th/2, -w/2, th, w);
+  } else {
+    const seg = 0.5*ppm, gap = 0.3*ppm, step = seg + gap;
+    const n = Math.max(1, Math.floor((w + gap)/step));
+    let y = -(n*seg + (n-1)*gap)/2;
+    for (let i = 0; i < n; i++){ g.fillRect(-th/2, y, th, seg); y += step; }
+  }
+  g.restore();
+}
+
 function drawElement(g, el){
   const T = TYPES[el.t]; if (!T) return;
   if (T.render === 'zebra') return drawZebra(g, el, T);
@@ -1268,6 +1354,7 @@ function drawElement(g, el){
   if (T.geom === 'circle') return drawCircleEl(g, el, T);
   if (T.geom === 'point')  return drawPointEl(g, el, T);
   if (T.geom === 'arrow')  return drawArrow(g, el, T);
+  if (T.geom === 'bar')    return drawBar(g, el, T);
 }
 
 function renderScene(g){
@@ -1315,7 +1402,8 @@ function solveLinks(){
 // Pfeile sitzen auf einer Fahrspur und folgen ihr
 function solveArrows(){
   for (const el of elements){
-    if (TYPES[el.t].geom !== 'arrow' || !el.on) continue;
+    const g2 = TYPES[el.t].geom;
+    if ((g2 !== 'arrow' && g2 !== 'bar') || !el.on) continue;
     const host = elements.find(x => x.id === el.on);
     if (!host || TYPES[host.t].geom !== 'line'){ delete el.on; continue; }
     const S = shape(host).pts;
@@ -1362,10 +1450,12 @@ function draw(){
       const T = TYPES[el.t];
       if (T.geom === 'circle'){
         ctx.beginPath(); ctx.arc(el.pts[0].x, el.pts[0].y, (el.r??T.r)*ppm, 0, Math.PI*2); ctx.stroke();
-      } else if (T.geom === 'arrow'){
+      } else if (T.geom === 'arrow' || T.geom === 'bar'){
         if (el.pts[0]){
+          const rr = T.geom === 'arrow' ? (el.len ?? 5)*ppm*0.5
+                                        : Math.max((el.hw ?? 3.25)*ppm*0.55, ppm);
           ctx.beginPath();
-          ctx.arc(el.pts[0].x, el.pts[0].y, (el.len ?? 5)*ppm*0.5, 0, Math.PI*2);
+          ctx.arc(el.pts[0].x, el.pts[0].y, rr, 0, Math.PI*2);
           ctx.stroke();
         }
       } else if (T.geom === 'point'){
@@ -1400,7 +1490,7 @@ function draw(){
           ctx.globalAlpha = 1;
         }
       }
-      if (T.geom !== 'arrow') for (const p of el.pts) handle(p);
+      if (T.geom !== 'arrow' && T.geom !== 'bar') for (const p of el.pts) handle(p);
       if (T.geom === 'circle') handle({x:el.pts[0].x + (el.r??T.r)*ppm, y:el.pts[0].y});
     }
   }
@@ -1597,13 +1687,15 @@ function hitElement(p){
       if (dist(p, el.pts[0]) <= (el.r??T.r)*ppm + tol) return el;
     } else if (T.geom === 'arrow'){
       if (el.pts[0] && dist(p, el.pts[0]) <= (el.len ?? 5)*ppm*0.5 + tol) return el;
+    } else if (T.geom === 'bar'){
+      if (el.pts[0] && dist(p, el.pts[0]) <= Math.max((el.hw ?? 3.25)*ppm*0.5, ppm) + tol) return el;
     }
   }
   return null;
 }
 function hitHandle(p){
   const el = elements.find(e=>e.id===sel); if (!el) return null;
-  if (TYPES[el.t].geom === 'arrow') return null;
+  if (TYPES[el.t].geom === 'arrow' || TYPES[el.t].geom === 'bar') return null;
   const tol = 8/view.k, T = TYPES[el.t];
   for (let i=0;i<el.pts.length;i++) if (dist(p, el.pts[i]) < tol) return {el, i};
   if (T.geom === 'circle'){
@@ -2006,6 +2098,7 @@ function newElement(t, pts){
   if (T.geom === 'line' || T.geom === 'circle') el.w = T.w;
   if (T.geom === 'circle' || T.geom === 'point') el.r = T.r;
   if ((T.geom === 'line' || T.geom === 'area') && T.r0 !== undefined){ el.cv = T.cv0 || 'weich'; el.cr = T.r0; }
+  if (T.alt && bikeCol === 'rot') el.col = 'rot';
   return el;
 }
 function startExtend(el, atStart){
@@ -2109,14 +2202,16 @@ cv.addEventListener('pointerdown', e=>{
 
   const T = TYPES[tool];
 
-  if (T.geom === 'arrow'){
+  if (T.geom === 'arrow' || T.geom === 'bar'){
     const hit = hitElement(p);
     const HT = hit && TYPES[hit.t];
-    if (!hit || !HT.kfz || HT.ticks){
-      return;   // Pfeile gehören auf Fahrspuren
-    }
+    const okHost = hit && HT.geom === 'line' && HT.render !== 'zebra' && !HT.ticks &&
+                   (T.geom === 'arrow' ? HT.kfz : HT.rank <= 2);
+    if (!okHost) return;
     pushHistory();
-    const el = {id:uid++, t:tool, on:hit.id, u:paramAt(shape(hit).pts, p), kind:lastArrow, len:5};
+    const el = {id:uid++, t:tool, on:hit.id, u:paramAt(shape(hit).pts, p)};
+    if (T.geom === 'arrow'){ el.kind = lastArrow; el.len = 5; }
+    else el.kind = lastBar;
     elements.push(el);
     sel = el.id; selSeg = 0;
     syncInspector(); draw(); return;
@@ -2152,7 +2247,8 @@ cv.addEventListener('pointermove', e=>{
 
   if (drag){
     if (drag.kind === 'move'){
-      if (TYPES[drag.el.t].geom === 'arrow' && drag.el.on){
+      const dg = TYPES[drag.el.t].geom;
+      if ((dg === 'arrow' || dg === 'bar') && drag.el.on){
         const host = elements.find(x => x.id === drag.el.on);
         if (host){ drag.el.u = paramAt(shape(host).pts, p); draw(); return; }
       }
@@ -2268,6 +2364,8 @@ const ins = {
   fr: document.getElementById('fieldR'), r: document.getElementById('insR'), rr: document.getElementById('insRR'),
   fc: document.getElementById('fieldCurve'), seg: document.getElementById('segCurve'),
   rowCR: document.getElementById('rowCR'), cr: document.getElementById('insCR'), crr: document.getElementById('insCRR'),
+  fcol: document.getElementById('fieldCol'), segCol: document.getElementById('segCol'),
+  fbar: document.getElementById('fieldBar'), segBar: document.getElementById('segBar'),
   fa: document.getElementById('fieldArrow'), aKind: document.getElementById('arrowKind'),
   aLen: document.getElementById('arrowLen'),
   ft: document.getElementById('fieldType'), type: document.getElementById('insType'),
@@ -2336,6 +2434,16 @@ function syncInspector(){
     ins.rowCR.hidden = m !== 'bogen';
     ins.cr.value = curveR(el).toFixed(1);
     ins.crr.value = curveR(el);
+  }
+  ins.fcol.hidden = !T.alt;
+  if (!ins.fcol.hidden){
+    const c = el.col === 'rot' ? 'rot' : 'gruen';
+    ins.segCol.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.col === c));
+  }
+  ins.fbar.hidden = T.geom !== 'bar';
+  if (!ins.fbar.hidden){
+    const k = el.kind || 'halt';
+    ins.segBar.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.bar === k));
   }
   ins.fa.hidden = T.geom !== 'arrow';
   if (!ins.fa.hidden){
@@ -2418,6 +2526,21 @@ for (const side of ['l','mid','r']){
     syncInspector(); draw();
   });
 }
+ins.segCol.addEventListener('click', e=>{
+  const b = e.target.closest('button'); if (!b) return;
+  const el = elements.find(x=>x.id===sel); if (!el) return;
+  pushHistory();
+  bikeCol = b.dataset.col;
+  if (bikeCol === 'rot') el.col = 'rot'; else delete el.col;
+  refreshSwatches();
+  syncInspector(); draw();
+});
+ins.segBar.addEventListener('click', e=>{
+  const b = e.target.closest('button'); if (!b) return;
+  const el = elements.find(x=>x.id===sel); if (!el) return;
+  pushHistory(); el.kind = b.dataset.bar; lastBar = el.kind;
+  syncInspector(); draw();
+});
 ins.aKind.addEventListener('change', e=>{
   const el = elements.find(x=>x.id===sel); if (!el) return;
   pushHistory(); el.kind = e.target.value; lastArrow = el.kind;
@@ -2571,6 +2694,23 @@ document.getElementById('imgOpacity').addEventListener('input', e=>{
 document.getElementById('btnCheck').addEventListener('click', e=>{
   checkRadii = !checkRadii; e.currentTarget.classList.toggle('on', checkRadii); draw();
 });
+document.getElementById('btnFit').addEventListener('click', ()=>{
+  if (img && !elements.length) return fitToImage(), draw();
+  let x0=Infinity, y0=Infinity, x1=-Infinity, y1=-Infinity;
+  for (const el of elements) for (const p of (el.pts || [])){
+    const r = TYPES[el.t].geom === 'circle' ? (el.r ?? TYPES[el.t].r)*ppm : 0;
+    x0=Math.min(x0,p.x-r); y0=Math.min(y0,p.y-r);
+    x1=Math.max(x1,p.x+r); y1=Math.max(y1,p.y+r);
+  }
+  if (img){ x0=Math.min(x0,0); y0=Math.min(y0,0); x1=Math.max(x1,img.width); y1=Math.max(y1,img.height); }
+  if (!isFinite(x0)) return fitToImage(), draw();
+  const pad = 4*ppm, r = cv.getBoundingClientRect();
+  const w = (x1-x0) + 2*pad, h = (y1-y0) + 2*pad;
+  view.k = Math.max(0.02, Math.min(60, Math.min(r.width/w, r.height/h)));
+  view.x = r.width/2 - ((x0+x1)/2)*view.k;
+  view.y = r.height/2 - ((y0+y1)/2)*view.k;
+  draw();
+});
 document.getElementById('btnGrid').addEventListener('click', e=>{
   showGrid = !showGrid; e.currentTarget.classList.toggle('on', showGrid); draw();
 });
@@ -2675,6 +2815,11 @@ function updateHint(){
     return;
   }
   const T = TYPES[tool];
+  if (T.geom === 'bar'){
+    h.innerHTML = '<b>Halte-/Wartelinie:</b> auf eine Spur klicken – die Linie liegt quer über '
+      + 'ihre volle Breite und lässt sich auf ihr verschieben.';
+    return;
+  }
   if (T.geom === 'arrow'){
     h.innerHTML = '<b>Fahrtrichtungspfeil:</b> auf eine Fahrspur klicken. '
       + 'Der Pfeil richtet sich nach der Spur und lässt sich auf ihr verschieben; '
@@ -2693,6 +2838,7 @@ function updateHint(){
    Start
    ============================================================ */
 restore();
+refreshSwatches();
 setTool('select');
 syncScaleState();
 syncHistoryButtons();
