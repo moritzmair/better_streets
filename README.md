@@ -71,6 +71,19 @@ eine Schraffur. Der Fußgängerüberweg wird von Bordstein zu Bordstein gezeichn
 Streifen liegen quer zur Gehrichtung, also parallel zur Fahrbahnachse, und sind 4 m tief.
 Radverkehrsanlagen sind grün eingefärbt.
 
+## Fahrtrichtungspfeile
+
+Das Werkzeug **Fahrtrichtungspfeil** (Kfz-Verkehr) setzt einen Pfeil auf eine Fahrspur:
+Klick auf die Spur genügt, der Pfeil richtet sich nach ihrer Richtung und sitzt auf der
+Achse. Sechs Formen im Inspektor: geradeaus, links, rechts, geradeaus + links,
+geradeaus + rechts, links + rechts. „Umdrehen" dreht ihn um 180°, wenn die Spur gegen die
+Fahrtrichtung gezeichnet wurde; die Länge ist einstellbar (Vorgabe 5 m).
+
+Der Pfeil hängt an seiner Spur: Ziehen verschiebt ihn *entlang* der Spur, Formänderungen der
+Spur nimmt er mit, und mit der Spur wird er gelöscht. Seine seitliche Ausdehnung wird auf die
+Fahrbahnbreite begrenzt, damit Abbiegepfeile nicht über den Rand ragen. Pfeile lassen sich
+nur auf Fahrspuren und Busspuren setzen, nicht auf Rad- oder Gehwegen.
+
 ## Querungen
 
 Wege haben einen Rang: Kfz (1) < Rad (2) < Fuß (3). Überquert ein Weg eine rangniedrigere

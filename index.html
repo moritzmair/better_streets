@@ -338,6 +338,15 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
           <label>Typ</label>
           <select id="insType"></select>
         </div>
+        <div class="field" id="fieldArrow" hidden>
+          <label>Pfeil</label>
+          <select id="arrowKind"></select>
+          <div class="row">
+            <input type="number" id="arrowLen" step="0.5" min="1" max="12">
+            <span class="mono" style="font-size:11px;color:var(--ink3)">m lang</span>
+            <button class="btn" id="arrowFlip">Umdrehen</button>
+          </div>
+        </div>
         <div class="field" id="fieldMark" hidden>
           <label>Markierung</label>
           <div class="mrow"><span>links</span><select id="markL"></select></div>
@@ -447,6 +456,17 @@ const BIKE    = '#2f7d4b';
 const WALK    = '#cbc4b7';
 const GREEN   = '#5d8a49';
 
+// Fahrtrichtungspfeile (Zeichen 297)
+const ARROWS = {
+  gerade:        'geradeaus',
+  rechts:        'rechts',
+  links:         'links',
+  gerade_rechts: 'geradeaus + rechts',
+  gerade_links:  'geradeaus + links',
+  links_rechts:  'links + rechts',
+};
+let lastArrow = 'gerade';
+
 // Fahrbahnmarkierungen – Strich/Lücke und Breite in Metern
 const MARKS = {
   '':    {n:'keine'},
@@ -464,6 +484,8 @@ const TYPES = {
   busspur:       {n:'Busspur',             g:'Kfz-Verkehr',   geom:'line', rank:1,   w:3.50, z:23, fill:'#565a5e', kfz:true, mark:{l:'breit', r:'breit'}, r0:12, rmin:10},
   parken_laengs: {n:'Parken längs',        g:'Kfz-Verkehr',   geom:'line', rank:1,   w:2.00, z:20, fill:'#54585c', kfz:true, mark:{l:'voll', r:'voll'}, ticks:5.5, r0:6, rmin:4},
   parken_quer:   {n:'Parken quer',         g:'Kfz-Verkehr',   geom:'line', rank:1,   w:5.00, z:20, fill:'#54585c', kfz:true, mark:{l:'voll', r:'voll'}, ticks:2.5, r0:6, rmin:4},
+
+  pfeil:         {n:'Fahrtrichtungspfeil',g:'Kfz-Verkehr',   geom:'arrow',  z:25, fill:MARK, sw:MARK},
 
   radweg:        {n:'Radweg',              g:'Radverkehr',    geom:'line', rank:2,   w:2.00, z:32, fill:BIKE, border:{c:'#256240',w:0.08}, r0:10, rmin:2.5},
   radweg_zwei:   {n:'Radweg 2-Richtung',   g:'Radverkehr',    geom:'line', rank:2,   w:3.00, z:32, fill:BIKE, border:{c:'#256240',w:0.08}, mark:{mid:'kurz'}, r0:10, rmin:5},
@@ -537,7 +559,8 @@ const rail = document.getElementById('rail');
     for (const [id,T] of items){
       const label = T.geom==='line' ? fmt(T.w)+' m'
                   : T.geom==='circle' ? 'ø '+fmt1(T.r*2)+' m'
-                  : T.geom==='point' ? 'ø '+fmt1(T.r*2)+' m' : 'Fläche';
+                  : T.geom==='point' ? 'ø '+fmt1(T.r*2)+' m'
+                  : T.geom==='arrow' ? 'auf Spur' : 'Fläche';
       w.appendChild(toolBtn(id, T.n, label, T.sw||T.fill));
     }
     s.appendChild(w); rail.appendChild(s);
@@ -1177,6 +1200,66 @@ function drawPointEl(g, el, T){
   g.fillStyle = '#33502a'; g.fill();
 }
 
+// Pfeilgeometrie in Metern, Ursprung in der Mitte, +x = Fahrtrichtung, +y = rechts.
+// latMax begrenzt die seitliche Ausdehnung auf die Fahrbahnbreite.
+function arrowPath(kind, L, latMax){
+  let headL = 1.0, headW = 1.25, R = 0.35;
+  const lat = R + headL;
+  if (latMax > 0 && lat > latMax){
+    const k = latMax/lat;
+    headL *= k; headW *= k; R *= k;
+  }
+  const ox = -L/2;
+  const straight = kind.indexOf('gerade') === 0;
+  const right = kind.indexOf('rechts') >= 0;
+  const left = kind.indexOf('links') >= 0;
+  const bx = Math.max(0.8, L - 1.6 - R);
+  const strokes = [], heads = [];
+
+  if (straight){
+    strokes.push([{x:ox, y:0}, {x:ox + L - headL, y:0}]);
+    heads.push({x:ox + L, y:0, a:0});
+  } else {
+    strokes.push([{x:ox, y:0}, {x:ox + bx, y:0}]);
+  }
+  for (const s2 of [right ? 1 : 0, left ? -1 : 0]){
+    if (!s2) continue;
+    const cx = ox + bx, cy = s2*R, arc = [];
+    for (let i = 0; i <= 8; i++){
+      const t = (-s2*Math.PI/2) * (1 - i/8);
+      arc.push({x:cx + Math.cos(t)*R, y:cy + Math.sin(t)*R});
+    }
+    strokes.push(arc);
+    heads.push({x:cx + R, y:s2*(R + headL), a:s2*Math.PI/2});
+  }
+  return {strokes, heads, headL, headW};
+}
+
+function drawArrow(g, el, T){
+  const p = el.pts && el.pts[0];
+  if (!p) return;
+  const L = el.len ?? 5;
+  const latMax = ((el.hw ?? 3.25)/2) - 0.15;
+  const {strokes, heads, headL, headW} = arrowPath(el.kind || 'gerade', L, latMax);
+  g.save();
+  g.translate(p.x, p.y);
+  g.rotate((el.a ?? 0) + (el.rev ? Math.PI : 0));
+  g.scale(ppm, ppm);
+  g.strokeStyle = MARK; g.fillStyle = MARK;
+  g.lineWidth = 0.5; g.lineCap = 'butt'; g.lineJoin = 'round';
+  for (const st of strokes){ poly(g, st); g.stroke(); }
+  for (const h of heads){
+    const c = Math.cos(h.a), s2 = Math.sin(h.a);
+    const bxp = h.x - c*headL, byp = h.y - s2*headL;
+    g.beginPath();
+    g.moveTo(h.x, h.y);
+    g.lineTo(bxp - s2*headW/2, byp + c*headW/2);
+    g.lineTo(bxp + s2*headW/2, byp - c*headW/2);
+    g.closePath(); g.fill();
+  }
+  g.restore();
+}
+
 function drawElement(g, el){
   const T = TYPES[el.t]; if (!T) return;
   if (T.render === 'zebra') return drawZebra(g, el, T);
@@ -1184,6 +1267,7 @@ function drawElement(g, el){
   if (T.geom === 'area')   return drawArea(g, el, T);
   if (T.geom === 'circle') return drawCircleEl(g, el, T);
   if (T.geom === 'point')  return drawPointEl(g, el, T);
+  if (T.geom === 'arrow')  return drawArrow(g, el, T);
 }
 
 function renderScene(g){
@@ -1228,10 +1312,26 @@ function solveLinks(){
   }
 }
 
+// Pfeile sitzen auf einer Fahrspur und folgen ihr
+function solveArrows(){
+  for (const el of elements){
+    if (TYPES[el.t].geom !== 'arrow' || !el.on) continue;
+    const host = elements.find(x => x.id === el.on);
+    if (!host || TYPES[host.t].geom !== 'line'){ delete el.on; continue; }
+    const S = shape(host).pts;
+    if (S.length < 2) continue;
+    const at = pointAt(S, Math.max(0, Math.min(1, el.u ?? 0.5)));
+    el.pts = [at.p];
+    el.a = Math.atan2(at.u.y, at.u.x);
+    el.hw = host.w ?? TYPES[host.t].w;
+  }
+}
+
 function unlink(el){ if (el && el.par) delete el.par; }
 
 function draw(){
   solveLinks();
+  solveArrows();
   const dpr = window.devicePixelRatio || 1;
   ctx.setTransform(1,0,0,1,0,0);
   ctx.fillStyle = cssv('--stage') || '#111';
@@ -1262,6 +1362,12 @@ function draw(){
       const T = TYPES[el.t];
       if (T.geom === 'circle'){
         ctx.beginPath(); ctx.arc(el.pts[0].x, el.pts[0].y, (el.r??T.r)*ppm, 0, Math.PI*2); ctx.stroke();
+      } else if (T.geom === 'arrow'){
+        if (el.pts[0]){
+          ctx.beginPath();
+          ctx.arc(el.pts[0].x, el.pts[0].y, (el.len ?? 5)*ppm*0.5, 0, Math.PI*2);
+          ctx.stroke();
+        }
       } else if (T.geom === 'point'){
         ctx.beginPath(); ctx.arc(el.pts[0].x, el.pts[0].y, (el.r??T.r)*ppm + 2/view.k, 0, Math.PI*2); ctx.stroke();
       } else {
@@ -1294,7 +1400,7 @@ function draw(){
           ctx.globalAlpha = 1;
         }
       }
-      for (const p of el.pts) handle(p);
+      if (T.geom !== 'arrow') for (const p of el.pts) handle(p);
       if (T.geom === 'circle') handle({x:el.pts[0].x + (el.r??T.r)*ppm, y:el.pts[0].y});
     }
   }
@@ -1489,12 +1595,15 @@ function hitElement(p){
       if (dist(p, el.pts[0]) <= (el.r??T.r)*ppm + tol) return el;
     } else if (T.geom === 'point'){
       if (dist(p, el.pts[0]) <= (el.r??T.r)*ppm + tol) return el;
+    } else if (T.geom === 'arrow'){
+      if (el.pts[0] && dist(p, el.pts[0]) <= (el.len ?? 5)*ppm*0.5 + tol) return el;
     }
   }
   return null;
 }
 function hitHandle(p){
   const el = elements.find(e=>e.id===sel); if (!el) return null;
+  if (TYPES[el.t].geom === 'arrow') return null;
   const tol = 8/view.k, T = TYPES[el.t];
   for (let i=0;i<el.pts.length;i++) if (dist(p, el.pts[i]) < tol) return {el, i};
   if (T.geom === 'circle'){
@@ -1999,6 +2108,20 @@ cv.addEventListener('pointerdown', e=>{
   }
 
   const T = TYPES[tool];
+
+  if (T.geom === 'arrow'){
+    const hit = hitElement(p);
+    const HT = hit && TYPES[hit.t];
+    if (!hit || !HT.kfz || HT.ticks){
+      return;   // Pfeile gehören auf Fahrspuren
+    }
+    pushHistory();
+    const el = {id:uid++, t:tool, on:hit.id, u:paramAt(shape(hit).pts, p), kind:lastArrow, len:5};
+    elements.push(el);
+    sel = el.id; selSeg = 0;
+    syncInspector(); draw(); return;
+  }
+
   const sn = snapPoint(p, null, T.geom === 'line' && T.render !== 'zebra' ? T.w : 0);
   const sp = sn ? sn.p : p;
   snapMark = sn;
@@ -2029,6 +2152,10 @@ cv.addEventListener('pointermove', e=>{
 
   if (drag){
     if (drag.kind === 'move'){
+      if (TYPES[drag.el.t].geom === 'arrow' && drag.el.on){
+        const host = elements.find(x => x.id === drag.el.on);
+        if (host){ drag.el.u = paramAt(shape(host).pts, p); draw(); return; }
+      }
       const dx = p.x-drag.last.x, dy = p.y-drag.last.y;
       for (const q of drag.el.pts){ q.x += dx; q.y += dy; }
       drag.last = p; draw(); return;
@@ -2141,6 +2268,8 @@ const ins = {
   fr: document.getElementById('fieldR'), r: document.getElementById('insR'), rr: document.getElementById('insRR'),
   fc: document.getElementById('fieldCurve'), seg: document.getElementById('segCurve'),
   rowCR: document.getElementById('rowCR'), cr: document.getElementById('insCR'), crr: document.getElementById('insCRR'),
+  fa: document.getElementById('fieldArrow'), aKind: document.getElementById('arrowKind'),
+  aLen: document.getElementById('arrowLen'),
   ft: document.getElementById('fieldType'), type: document.getElementById('insType'),
   fm: document.getElementById('fieldMark'),
   mk: {l:document.getElementById('markL'), mid:document.getElementById('markM'), r:document.getElementById('markR')},
@@ -2207,6 +2336,13 @@ function syncInspector(){
     ins.rowCR.hidden = m !== 'bogen';
     ins.cr.value = curveR(el).toFixed(1);
     ins.crr.value = curveR(el);
+  }
+  ins.fa.hidden = T.geom !== 'arrow';
+  if (!ins.fa.hidden){
+    const cur = el.kind || 'gerade';
+    ins.aKind.innerHTML = Object.entries(ARROWS).map(([k,n]) =>
+      '<option value="'+k+'"'+(k===cur?' selected':'')+'>'+n+'</option>').join('');
+    ins.aLen.value = (el.len ?? 5).toFixed(1);
   }
   const swappable = Object.entries(TYPES).filter(([id,t]) => t.geom === T.geom && !!t.render === !!T.render);
   ins.ft.hidden = swappable.length < 2;
@@ -2282,6 +2418,22 @@ for (const side of ['l','mid','r']){
     syncInspector(); draw();
   });
 }
+ins.aKind.addEventListener('change', e=>{
+  const el = elements.find(x=>x.id===sel); if (!el) return;
+  pushHistory(); el.kind = e.target.value; lastArrow = el.kind;
+  draw();
+});
+ins.aLen.addEventListener('change', e=>{
+  const el = elements.find(x=>x.id===sel); if (!el) return;
+  const v = parseFloat(e.target.value);
+  if (!isFinite(v)) return;
+  pushHistory(); el.len = Math.max(1, Math.min(12, v));
+  syncInspector(); draw();
+});
+document.getElementById('arrowFlip').addEventListener('click', ()=>{
+  const el = elements.find(x=>x.id===sel); if (!el) return;
+  pushHistory(); el.rev = !el.rev; draw();
+});
 ins.type.addEventListener('change', e=>{
   const el = elements.find(x=>x.id===sel); if (!el) return;
   const nt = TYPES[e.target.value]; if (!nt) return;
@@ -2341,7 +2493,11 @@ for (const [inp, field] of [[ins.w,'w'],[ins.wr,'w'],[ins.r,'r'],[ins.rr,'r'],[i
 }
 function deleteSelection(){
   const i = elements.findIndex(e=>e.id===sel); if (i < 0) return;
-  pushHistory(); elements.splice(i,1); sel = null; syncInspector(); draw();
+  const id = elements[i].id;
+  pushHistory();
+  elements.splice(i,1);
+  elements = elements.filter(e => !(TYPES[e.t].geom === 'arrow' && e.on === id));
+  sel = null; syncInspector(); draw();
 }
 document.getElementById('insDel').addEventListener('click', deleteSelection);
 document.getElementById('insDup').addEventListener('click', ()=>{
@@ -2350,7 +2506,10 @@ document.getElementById('insDup').addEventListener('click', ()=>{
   const off = 3*ppm;
   const copy = JSON.parse(JSON.stringify(el));
   copy.id = uid++; delete copy.par;
-  copy.pts = copy.pts.map(p=>({x:p.x+off, y:p.y+off}));
+  if (TYPES[el.t].geom === 'arrow' && copy.on)
+    copy.u = Math.max(0, Math.min(1, (copy.u ?? 0.5) + 0.06));
+  else
+    copy.pts = copy.pts.map(p=>({x:p.x+off, y:p.y+off}));
   elements.push(copy); sel = copy.id; syncInspector(); draw();
 });
 
@@ -2516,6 +2675,12 @@ function updateHint(){
     return;
   }
   const T = TYPES[tool];
+  if (T.geom === 'arrow'){
+    h.innerHTML = '<b>Fahrtrichtungspfeil:</b> auf eine Fahrspur klicken. '
+      + 'Der Pfeil richtet sich nach der Spur und lässt sich auf ihr verschieben; '
+      + 'die Form wählst du im Inspektor.';
+    return;
+  }
   if (T.geom === 'point'){ h.innerHTML = '<b>'+T.n+':</b> klicken zum Setzen.'; return; }
   if (T.geom === 'circle'){ h.innerHTML = '<b>'+T.n+':</b> Mitte klicken, Radius aufziehen, erneut klicken.'; return; }
   if (T.maxPts === 2){ h.innerHTML = '<b>'+T.n+':</b> von Bordstein zu Bordstein klicken – zwei Punkte.'; return; }
