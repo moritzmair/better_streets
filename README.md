@@ -1,0 +1,108 @@
+# Straßenskizze
+
+Einzelne HTML-Datei, kein Build, keine Abhängigkeiten außer Google Fonts.
+`index.html` im Browser öffnen – fertig.
+
+## Ablauf
+
+1. **Luftbild laden** – Datei wählen, ins Fenster ziehen oder mit `Strg/Cmd+V` einfügen.
+2. **Maßstab setzen** – zwei Punkte mit bekanntem Abstand anklicken, Länge in Metern eintragen.
+   Erst danach stimmen die vorgegebenen Breiten. Späteres Nachkalibrieren skaliert den Entwurf mit.
+3. **Zeichnen** – Werkzeug links wählen, Punkte klicken, `Doppelklick`/`Enter` beendet den Zug.
+   Breiten sind als Planungsmaße vorbelegt und pro Element im Inspektor änderbar.
+
+## Kurven und Radien
+
+Jeder Zug hat eine Kurvenführung:
+
+* **Weich** (Vorgabe) – zentripetaler Catmull-Rom-Spline durch alle Punkte. Der kleinste
+  Krümmungsradius wird numerisch aus der Kurve bestimmt.
+* **Bogen** – an jeder Ecke ein Kreisbogen mit festem Radius (Bordstein-/Kurvenradius).
+  Vorbelegt: Kfz 6 m, Bus 12 m, Rad 10 m, Fuß 3 m. Radius 0 ergibt spitze Ecken.
+  Reicht die Schenkellänge nicht, wird der Bogen verkleinert – der Inspektor zeigt dann
+  den tatsächlich erreichten Radius.
+
+Liegt ein Radius unter dem Richtwert des Typs (Kfz 5 m, Bus 10 m, Rad 5 m, Fuß 1,5 m),
+markiert die Prüfung die Stelle im Bild mit dem gemessenen Radius. Über „Radien" abschaltbar;
+im Export sind die Marken nie enthalten. Beim Kreisverkehr ordnet der Inspektor den
+Außendurchmesser ein (Mini 13–22 m, klein 26–40 m).
+
+Die Werte sind Orientierungswerte aus der Entwurfspraxis (RASt/ERA-Größenordnung),
+keine Normprüfung – im Zweifel das Regelwerk heranziehen.
+
+## Wege ändern
+
+Ist ein Weg ausgewählt, erscheinen orange **+**-Marken:
+
+* **+ am Ende** verlängert den Weg – weitere Punkte klicken, `Enter` beendet. Hängen dort
+  gekoppelte Nachbarspuren, wachsen sie mit; das Verlängern greift immer an der Bezugsspur an.
+* **+ zwischen zwei Punkten** setzt dort einen Wegpunkt. Er liegt auf der bestehenden Kurve,
+  die Form ändert sich also nicht – erst das Ziehen des neuen Griffs verändert sie.
+
+## Markierungsabschnitte
+
+Das Werkzeug **Trennen** teilt einen Weg in Abschnitte, ohne ihn geometrisch zu zerschneiden:
+die Linienführung bleibt eine durchgehende Kurve, nur die Markierung darf ab dort anders sein –
+etwa Leitlinie auf der freien Strecke, durchgezogen vor der Kreuzung.
+
+Klick auf den Weg setzt eine Trennstelle, Klick auf eine bestehende hebt sie auf. Beim
+Auswählen bestimmt die angeklickte Stelle, welcher Abschnitt im Inspektor bearbeitet wird:
+er wird auf der Karte eingefärbt und beschriftet („Abschnitt 2/3"), seine Trennstellen
+stehen kräftig, die übrigen blass. Gekoppelte Nachbarspuren übernehmen die Trennstellen, damit
+die gemeinsame Linie auf beiden Seiten gleich läuft.
+
+## Markierungen
+
+Jede Linie hat drei Markierungsspuren – **links, Mitte, rechts** – jeweils: keine,
+gestrichelt (3 m / 6 m), gestrichelt kurz (1 m / 1 m), durchgezogen (0,12 m) oder
+breit durchgezogen (0,25 m). Vorbelegt nach Typ:
+
+| Typ | Vorgabe |
+|---|---|
+| Fahrspur, Parkstreifen | außen durchgezogen |
+| Busspur | beidseitig breit |
+| Radfahrstreifen | links breit durchgezogen |
+| Schutzstreifen | links gestrichelt kurz |
+| Radweg 2-Richtung | Mittellinie gestrichelt kurz |
+| Gehweg, Grünstreifen, Radweg | keine |
+
+Parkstreifen bekommen Stellplatzteiler (quer 2,5 m, längs 5,5 m), die Sperrfläche
+eine Schraffur, der Fußgängerüberweg Zebrastreifen quer zur Gehrichtung.
+Radverkehrsanlagen sind grün eingefärbt.
+
+## Spuren nebeneinander
+
+Zwei Wege, eine Spur bündig an die nächste zu legen:
+
+* **Kantenfang** – beim Zeichnen und beim Ziehen rastet ein Punkt in der Nähe einer Spur
+  auf den bündigen Achsabstand ein (halbe Breite + halbe Breite). `Alt` hebt den Fang auf.
+* **Nachbarspur** – im Inspektor „◀ links / rechts ▶". Die neue Spur ist an ihre Bezugsspur
+  **gekoppelt**: sie übernimmt deren Form, Kurvenführung und Breitenänderungen über die
+  ganze Länge. Zwischen zwei Kfz-Spuren wird dabei automatisch eine Leitlinie gesetzt;
+  ändert man die Linie auf der gemeinsamen Kante, zieht die Nachbarspur mit. Über die Typwahl wird daraus z. B. ein Radweg, der Abstand passt sich der
+  neuen Breite an.
+
+Die Kopplung löst sich, sobald du einen Punkt der Nachbarspur ziehst – ab da läuft sie frei
+(Abbiegespur, ausschwenkender Radweg). „lösen" trennt sie ohne Bewegung.
+
+## Bedienung
+
+| Aktion | |
+|---|---|
+| Zug beenden | Doppelklick, `Enter` oder Rechtsklick |
+| Abbrechen / Auswahlwerkzeug | `Esc`, `V` |
+| Löschen | `Entf` |
+| Rückgängig / Wiederholen | `Strg+Z` / `Strg+Umschalt+Z` |
+| Karte verschieben | `Leertaste` + Ziehen oder mittlere Maustaste |
+| Zoomen | Mausrad |
+| Winkel einrasten (15°) | `Umschalt` beim Zeichnen |
+| Fang aussetzen | `Alt` |
+| Vorher/Nachher | `H` |
+
+Endpunkte fangen automatisch an vorhandenen Punkten – so schließen Fahrbahnen bündig an.
+Der Stand wird laufend im Browser (localStorage) gesichert, inklusive Luftbild bis ca. 3,5 MB.
+
+## Export
+
+„Bild exportieren" rendert Luftbild + Entwurf in Originalauflösung (max. 4000 px).
+Bild per Rechtsklick speichern oder in die Zwischenablage kopieren.

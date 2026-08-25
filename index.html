@@ -1,0 +1,2019 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Straßenskizze</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --chrome:#E9E7E2; --raised:#F6F5F2; --sunk:#DEDBD4; --line:#CFCCC4;
+  --ink:#1B1F1E; --ink2:#5F6663; --ink3:#8B918E;
+  --stage:#C7C4BE;
+  --accent:#B07407; --accent-bg:#F2B441; --accent-ink:#20180A;
+  --danger:#A33A2B; --warn:#B4442C;
+  --shadow:0 1px 2px rgba(20,24,23,.10), 0 8px 24px rgba(20,24,23,.10);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --chrome:#191D1F; --raised:#232A2D; --sunk:#121517; --line:#333B3E;
+    --ink:#E7EAE8; --ink2:#98A2A0; --ink3:#6E7877;
+    --stage:#101315;
+    --accent:#F2B441; --accent-bg:#F2B441; --accent-ink:#20180A;
+    --danger:#E0705C; --warn:#E2795F;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.45);
+  }
+}
+:root[data-theme="dark"]{
+  --chrome:#191D1F; --raised:#232A2D; --sunk:#121517; --line:#333B3E;
+  --ink:#E7EAE8; --ink2:#98A2A0; --ink3:#6E7877;
+  --stage:#101315;
+  --accent:#F2B441; --accent-bg:#F2B441; --accent-ink:#20180A;
+  --danger:#E0705C; --warn:#E2795F;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--chrome); color:var(--ink);
+  font-family:"Archivo","Helvetica Neue",Arial,sans-serif;
+  font-size:14px; line-height:1.4;
+  display:flex; flex-direction:column; overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+button,input,select{font:inherit;color:inherit}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}
+
+/* ---------- Topbar ---------- */
+.topbar{
+  flex:0 0 auto; display:flex; align-items:center; gap:18px;
+  padding:9px 14px; background:var(--chrome);
+  border-bottom:1px solid var(--line); flex-wrap:wrap;
+}
+.brand{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:.01em;padding-right:4px}
+.brand .mark{
+  width:20px;height:20px;border-radius:3px;background:var(--ink);
+  position:relative;flex:0 0 auto;
+}
+.brand .mark::after{
+  content:"";position:absolute;inset:0;
+  background:repeating-linear-gradient(90deg,transparent 0 8px,var(--accent-bg) 8px 12px);
+  mask:linear-gradient(#000,#000);border-radius:3px;
+}
+.grp{display:flex;align-items:center;gap:6px}
+.grp.right{margin-left:auto}
+.sep{width:1px;height:22px;background:var(--line)}
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--raised);border:1px solid var(--line);border-radius:6px;
+  padding:6px 11px;cursor:pointer;white-space:nowrap;
+  transition:background .12s ease,border-color .12s ease;
+}
+.btn:hover{background:var(--sunk)}
+.btn:active{transform:translateY(1px)}
+.btn.on{background:var(--accent-bg);border-color:var(--accent-bg);color:var(--accent-ink);font-weight:600}
+.btn.icon{padding:6px 9px}
+.btn.danger:hover{border-color:var(--danger);color:var(--danger)}
+.btn:disabled{opacity:.4;cursor:default}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.pill{
+  font-size:12px;padding:4px 9px;border-radius:99px;
+  border:1px solid var(--line);color:var(--ink2);white-space:nowrap;
+}
+.pill.warn{border-color:var(--accent);color:var(--accent);font-weight:600}
+.rangelabel{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink2)}
+input[type=range]{accent-color:var(--accent-bg);width:88px}
+
+/* ---------- Layout ---------- */
+main{flex:1 1 auto;display:flex;min-height:0}
+.rail{
+  flex:0 0 250px;overflow-y:auto;background:var(--chrome);
+  border-right:1px solid var(--line);padding:12px 10px 40px;
+  display:flex;flex-direction:column;gap:16px;
+}
+.rail h2{
+  margin:0 0 7px;font-size:10.5px;font-weight:700;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--ink3);
+}
+.tools{display:flex;flex-direction:column;gap:3px}
+.tool{
+  display:flex;align-items:center;gap:9px;width:100%;text-align:left;
+  background:none;border:1px solid transparent;border-radius:6px;
+  padding:6px 8px;cursor:pointer;
+}
+.tool:hover{background:var(--raised)}
+.tool.on{background:var(--raised);border-color:var(--accent-bg);box-shadow:inset 3px 0 0 var(--accent-bg)}
+.tool .sw{width:16px;height:16px;border-radius:3px;flex:0 0 auto;border:1px solid rgba(0,0,0,.25)}
+.tool .nm{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tool .wd{font-size:11.5px;color:var(--ink3);white-space:nowrap}
+.tool.on .wd{color:var(--ink2)}
+
+.stage{position:relative;flex:1 1 auto;min-width:0;background:var(--stage);overflow:hidden}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.stage.drop::after{
+  content:"Luftbild hier ablegen";position:absolute;inset:12px;
+  border:2px dashed var(--accent-bg);border-radius:10px;
+  display:grid;place-items:center;color:var(--accent-bg);font-weight:600;
+  background:rgba(0,0,0,.25);pointer-events:none;
+}
+
+/* ---------- HUD ---------- */
+.hud{position:absolute;inset:0;pointer-events:none}
+.hud > *{pointer-events:auto}
+.hint{
+  position:absolute;left:14px;bottom:14px;max-width:min(460px,60%);
+  background:var(--chrome);border:1px solid var(--line);border-radius:8px;
+  padding:8px 12px;font-size:12.5px;color:var(--ink2);box-shadow:var(--shadow);
+}
+.hint b{color:var(--ink);font-weight:600}
+.hint kbd{
+  font-family:"IBM Plex Mono",monospace;font-size:11px;background:var(--sunk);
+  border:1px solid var(--line);border-radius:4px;padding:1px 4px;color:var(--ink);
+}
+.scalebar{
+  position:absolute;left:14px;bottom:64px;
+  background:var(--chrome);border:1px solid var(--line);border-radius:8px;
+  padding:6px 10px 8px;box-shadow:var(--shadow);font-size:11px;color:var(--ink2);
+}
+.scalebar .bar{height:6px;border:1px solid var(--ink2);border-top:none;margin-top:3px}
+.inspector{
+  position:absolute;right:14px;bottom:14px;width:236px;
+  background:var(--chrome);border:1px solid var(--line);border-radius:10px;
+  padding:12px;box-shadow:var(--shadow);display:none;
+}
+.inspector.show{display:block}
+.inspector h3{margin:0 0 2px;font-size:14px}
+.inspector .sub{font-size:11px;color:var(--ink3);margin-bottom:10px}
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
+.field[hidden]{display:none}
+.field label{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);font-weight:600}
+.field .row{display:flex;align-items:center;gap:8px}
+.field .row[hidden]{display:none}
+.field input[type=number]{
+  width:76px;background:var(--raised);border:1px solid var(--line);
+  border-radius:5px;padding:5px 7px;font-family:"IBM Plex Mono",monospace;
+}
+.field input[type=range]{flex:1 1 auto;width:auto}
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{flex:1 1 0;background:var(--raised);border:0;padding:5px 6px;font-size:12px;cursor:pointer}
+.seg button:hover{background:var(--sunk)}
+.seg button + button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--accent-bg);color:var(--accent-ink);font-weight:600}
+.field select{background:var(--raised);border:1px solid var(--line);border-radius:5px;padding:5px 7px;width:100%}
+.mrow{display:grid;grid-template-columns:42px 1fr;gap:6px;align-items:center}
+.mrow span{font-size:11px;color:var(--ink3)}
+.mrow select{background:var(--raised);border:1px solid var(--line);border-radius:5px;padding:4px 6px;font-size:12px;width:100%}
+.linkinfo{flex:1 1 auto;font-size:11.5px;color:var(--ink2)}
+.linkinfo b{color:var(--ink);font-weight:600}
+#rowLink .btn{padding:4px 8px;font-size:12px}
+#btnUncut{margin-top:2px;padding:4px 8px;font-size:12px;justify-content:center}
+#btnUncut[hidden]{display:none}
+.note{font-size:11.5px;line-height:1.4;color:var(--ink2);margin:-2px 0 10px}
+.note .val{font-family:"IBM Plex Mono",monospace}
+.note.warn{color:var(--warn)}
+.inspector .actions{display:flex;gap:6px}
+.inspector .actions .btn{flex:1 1 auto;justify-content:center;font-size:12.5px;padding:5px 8px}
+
+/* ---------- Overlays ---------- */
+.overlay{
+  position:fixed;inset:0;background:rgba(10,12,13,.62);
+  display:none;place-items:center;padding:24px;z-index:20;
+}
+.overlay.show{display:grid}
+.card{
+  background:var(--chrome);border:1px solid var(--line);border-radius:12px;
+  padding:18px;box-shadow:var(--shadow);max-width:min(92vw,900px);max-height:88vh;
+  overflow:auto;display:flex;flex-direction:column;gap:12px;
+}
+.card h3{margin:0;font-size:16px}
+.card p{margin:0;color:var(--ink2);font-size:13px;max-width:60ch}
+.card img{max-width:100%;max-height:64vh;border-radius:6px;border:1px solid var(--line);background:var(--stage)}
+.card .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.card input[type=number]{
+  width:120px;background:var(--raised);border:1px solid var(--line);
+  border-radius:6px;padding:8px 10px;font-family:"IBM Plex Mono",monospace;font-size:15px;
+}
+@media (max-width:820px){
+  .rail{flex:0 0 auto;flex-direction:row;overflow-x:auto;padding:8px;border-right:none;border-bottom:1px solid var(--line)}
+  main{flex-direction:column}
+  .rail h2{white-space:nowrap}
+  .inspector{width:200px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand"><span class="mark"></span>Straßenskizze</div>
+
+  <div class="grp">
+    <label class="btn" for="file">Luftbild laden</label>
+    <input id="file" type="file" accept="image/*" hidden>
+    <button class="btn" id="btnScale">Maßstab setzen</button>
+    <span class="pill warn" id="scaleState">nicht kalibriert</span>
+  </div>
+
+  <div class="grp right">
+    <label class="rangelabel">Luftbild<input type="range" id="imgOpacity" min="15" max="100" value="100" title="Deckkraft des Luftbilds"></label>
+    <button class="btn icon" id="btnGrid" title="Raster (5 m) ein/aus">Raster</button>
+    <button class="btn icon on" id="btnCheck" title="Zu enge Kurvenradien markieren">Radien</button>
+    <button class="btn icon" id="btnCompare" title="Entwurf ausblenden – Vorher/Nachher">Vorher</button>
+    <span class="sep"></span>
+    <button class="btn icon" id="btnUndo" title="Rückgängig (Strg+Z)">↶</button>
+    <button class="btn icon" id="btnRedo" title="Wiederholen (Strg+Umschalt+Z)">↷</button>
+    <span class="sep"></span>
+    <button class="btn" id="btnExport">Bild exportieren</button>
+    <button class="btn danger" id="btnClear" title="Entwurf löschen">Leeren</button>
+  </div>
+</header>
+
+<main>
+  <aside class="rail" id="rail"></aside>
+
+  <div class="stage" id="stage">
+    <canvas id="cv"></canvas>
+    <div class="hud">
+      <div class="scalebar" id="scalebar" hidden>
+        <span class="mono" id="scalebarLabel">10 m</span>
+        <div class="bar" id="scalebarBar" style="width:100px"></div>
+      </div>
+      <div class="hint" id="hint"></div>
+      <div class="inspector" id="inspector">
+        <h3 id="insName">Auswahl</h3>
+        <div class="sub" id="insSub"></div>
+        <div class="field" id="fieldW">
+          <label id="labW">Breite</label>
+          <div class="row">
+            <input type="number" id="insW" step="0.05" min="0.2" max="60">
+            <input type="range" id="insWR" step="0.05" min="0.5" max="20">
+          </div>
+        </div>
+        <div class="field" id="fieldR" hidden>
+          <label>Außenradius</label>
+          <div class="row">
+            <input type="number" id="insR" step="0.5" min="2" max="120">
+            <input type="range" id="insRR" step="0.5" min="4" max="40">
+          </div>
+        </div>
+        <div class="field" id="fieldCurve" hidden>
+          <label>Kurvenführung</label>
+          <div class="seg" id="segCurve">
+            <button type="button" data-cv="bogen">Bogen</button>
+            <button type="button" data-cv="weich">Weich</button>
+          </div>
+          <div class="row" id="rowCR">
+            <input type="number" id="insCR" step="0.5" min="0" max="60">
+            <input type="range" id="insCRR" step="0.5" min="0" max="30">
+          </div>
+        </div>
+        <div class="field" id="fieldType" hidden>
+          <label>Typ</label>
+          <select id="insType"></select>
+        </div>
+        <div class="field" id="fieldMark" hidden>
+          <label>Markierung</label>
+          <div class="mrow"><span>links</span><select id="markL"></select></div>
+          <div class="mrow"><span>Mitte</span><select id="markM"></select></div>
+          <div class="mrow"><span>rechts</span><select id="markR"></select></div>
+          <button class="btn" id="btnUncut" hidden>Trennstellen aufheben</button>
+        </div>
+        <div class="field" id="fieldPar" hidden>
+          <label>Nachbarspur bündig anlegen</label>
+          <div class="seg" id="segPar">
+            <button type="button" data-side="l">◀ links</button>
+            <button type="button" data-side="r">rechts ▶</button>
+          </div>
+          <div class="row" id="rowLink" hidden>
+            <span class="linkinfo" id="linkInfo"></span>
+            <button class="btn" id="btnUnlink">lösen</button>
+          </div>
+        </div>
+        <div class="note" id="insNote"></div>
+        <div class="actions">
+          <button class="btn" id="insDup">Duplizieren</button>
+          <button class="btn danger" id="insDel">Löschen</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="overlay" id="ovScale">
+  <div class="card">
+    <h3>Wie lang ist diese Strecke?</h3>
+    <p>Miss etwas, dessen Länge du kennst – eine Fahrbahn, ein Zebrastreifen, ein Hausdach. Ein Pkw-Stellplatz ist 5&nbsp;m lang, eine normale Fahrspur 3,25&nbsp;m breit.</p>
+    <div class="row">
+      <input type="number" id="scaleMeters" step="0.1" min="0.1" value="10">
+      <span class="mono">Meter</span>
+      <button class="btn on" id="scaleApply">Übernehmen</button>
+      <button class="btn" id="scaleCancel">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ovExport">
+  <div class="card">
+    <h3>Entwurf als Bild</h3>
+    <p>Rechtsklick auf das Bild → „Bild speichern unter…“, oder in die Zwischenablage kopieren.</p>
+    <img id="exportImg" alt="Exportiertes Bild des Entwurfs">
+    <div class="row">
+      <button class="btn on" id="exportCopy">In Zwischenablage kopieren</button>
+      <button class="btn" id="exportClose">Schließen</button>
+      <span class="pill" id="exportNote" hidden></span>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ovClear">
+  <div class="card">
+    <h3>Entwurf löschen?</h3>
+    <p>Alle gezeichneten Elemente werden entfernt. Luftbild und Maßstab bleiben erhalten.</p>
+    <div class="row">
+      <button class="btn danger" id="clearYes">Ja, löschen</button>
+      <button class="btn" id="clearNo">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   Katalog der Elemente – Breiten nach gängigen Planungsmaßen
+   ============================================================ */
+const ASPHALT = '#4b4f53';
+const MARK    = '#e9e6df';
+const BIKE    = '#2f7d4b';
+const WALK    = '#cbc4b7';
+const GREEN   = '#5d8a49';
+
+// Fahrbahnmarkierungen – Strich/Lücke und Breite in Metern
+const MARKS = {
+  '':    {n:'keine'},
+  leit:  {n:'gestrichelt',       w:0.12, dash:[3,6]},
+  kurz:  {n:'gestrichelt kurz',  w:0.12, dash:[1,1]},
+  voll:  {n:'durchgezogen',      w:0.12},
+  breit: {n:'breit durchgezogen',w:0.25},
+};
+
+// Ebenen von hinten nach vorn:
+//   10 Flächen & Grün · 20 Kfz · 30 Rad · 40 Fuß · 50 Markierungsflächen · 60 Überwege · 70 Bäume
+const TYPES = {
+  fahrspur:      {n:'Fahrspur',            g:'Kfz-Verkehr',   geom:'line',   w:3.25, z:22, fill:ASPHALT, kfz:true, mark:{l:'voll', r:'voll'}, r0:6,  rmin:5},
+  fahrspur_eng:  {n:'Fahrspur Tempo 30',   g:'Kfz-Verkehr',   geom:'line',   w:2.75, z:22, fill:ASPHALT, kfz:true, mark:{l:'voll', r:'voll'}, r0:6,  rmin:4},
+  busspur:       {n:'Busspur',             g:'Kfz-Verkehr',   geom:'line',   w:3.50, z:23, fill:'#565a5e', kfz:true, mark:{l:'breit', r:'breit'}, r0:12, rmin:10},
+  parken_laengs: {n:'Parken längs',        g:'Kfz-Verkehr',   geom:'line',   w:2.00, z:20, fill:'#54585c', kfz:true, mark:{l:'voll', r:'voll'}, ticks:5.5, r0:6, rmin:4},
+  parken_quer:   {n:'Parken quer',         g:'Kfz-Verkehr',   geom:'line',   w:5.00, z:20, fill:'#54585c', kfz:true, mark:{l:'voll', r:'voll'}, ticks:2.5, r0:6, rmin:4},
+
+  radweg:        {n:'Radweg',              g:'Radverkehr',    geom:'line',   w:2.00, z:32, fill:BIKE, border:{c:'#256240',w:0.08}, r0:10, rmin:2.5},
+  radweg_zwei:   {n:'Radweg 2-Richtung',   g:'Radverkehr',    geom:'line',   w:3.00, z:32, fill:BIKE, border:{c:'#256240',w:0.08}, mark:{mid:'kurz'}, r0:10, rmin:5},
+  radfahrstreif: {n:'Radfahrstreifen',     g:'Radverkehr',    geom:'line',   w:1.85, z:31, fill:BIKE, mark:{l:'breit'}, r0:10, rmin:5},
+  schutzstreif:  {n:'Schutzstreifen',      g:'Radverkehr',    geom:'line',   w:1.50, z:30, fill:'#456855', mark:{l:'kurz'}, r0:10, rmin:5},
+  radstrasse:    {n:'Fahrradstraße',       g:'Radverkehr',    geom:'line',   w:4.50, z:31, fill:'#357f52', border:{c:'#256240',w:0.08}, r0:10, rmin:5},
+
+  gehweg:        {n:'Gehweg',              g:'Fußverkehr',    geom:'line',   w:2.50, z:40, fill:WALK, border:{c:'#a89e8f',w:0.10}, r0:3, rmin:1.5},
+  gehweg_breit:  {n:'Gehweg breit',        g:'Fußverkehr',    geom:'line',   w:4.00, z:40, fill:WALK, border:{c:'#a89e8f',w:0.10}, r0:3, rmin:1.5},
+  zebra:         {n:'Fußgängerüberweg',    g:'Fußverkehr',    geom:'line',   w:4.00, z:60, fill:'#ffffff', render:'zebra', maxPts:2, sw:'#f2f2f2'},
+  aufenthalt:    {n:'Aufenthaltsfläche',   g:'Fußverkehr',    geom:'area',   z:11, fill:'#918b81', border:{c:'#6f6a62',w:0.15}, r0:2},
+
+  gruenstreifen: {n:'Grünstreifen',        g:'Grün & Flächen',geom:'line',   w:2.00, z:12, fill:GREEN, r0:3, rmin:1},
+  gruenflaeche:  {n:'Grünfläche',          g:'Grün & Flächen',geom:'area',   z:10, fill:GREEN, border:{c:'#4a7139',w:0.15}, r0:2},
+  insel:         {n:'Verkehrsinsel',       g:'Grün & Flächen',geom:'area',   z:50, fill:'#a7a297', border:{c:MARK,w:0.15}, cv0:'bogen', r0:1.5},
+  baum:          {n:'Baum',                g:'Grün & Flächen',geom:'point',  r:3.0, z:70, fill:'#4f7d3e', sw:'#4f7d3e'},
+
+  kreisel:       {n:'Kreisverkehr',        g:'Knotenpunkt',   geom:'circle', w:6.00, r:12, z:21, fill:ASPHALT, sw:ASPHALT},
+  sperrflaeche:  {n:'Sperrfläche',         g:'Knotenpunkt',   geom:'area',   z:51, fill:ASPHALT, border:{c:MARK,w:0.15}, hatch:2.0, cv0:'bogen', r0:0.5},
+};
+
+/* ============================================================
+   Zustand
+   ============================================================ */
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const stage = document.getElementById('stage');
+
+let img = null, imgSrc = null, imgOpacity = 1;
+let ppm = 8;                 // Weltpixel pro Meter
+let calibrated = false;
+let elements = [];
+let view = {x:0, y:0, k:1};
+let tool = 'select';
+let mode = 'draw';           // 'draw' | 'scale'
+let draft = null;
+let sel = null;
+let showGrid = false, hideDesign = false, checkRadii = true;
+let renderScale = 1;   // Welt→Bildschirm, für pixelgenaue Überlappung
+let scalePts = [];
+let snapMark = null, cursor = null;
+let selSeg = 0, ext = null, badgeHits = [];
+let undoStack = [], redoStack = [];
+let spaceDown = false, shiftDown = false, altDown = false;
+let pan = null, drag = null;
+let uid = 1;
+
+const fmt = m => m.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmt1 = m => m.toLocaleString('de-DE',{maximumFractionDigits:1});
+const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+/* ============================================================
+   Werkzeugleiste
+   ============================================================ */
+const rail = document.getElementById('rail');
+(function buildRail(){
+  const sel1 = document.createElement('section');
+  sel1.innerHTML = '<h2>Bearbeiten</h2>';
+  const tw = document.createElement('div'); tw.className = 'tools';
+  tw.appendChild(toolBtn('select','Auswählen','', 'transparent'));
+  tw.appendChild(toolBtn('cut','Trennen','Markierung', 'transparent'));
+  sel1.appendChild(tw); rail.appendChild(sel1);
+
+  const groups = {};
+  for (const [id,T] of Object.entries(TYPES)) (groups[T.g] ||= []).push([id,T]);
+  for (const [gname,items] of Object.entries(groups)){
+    const s = document.createElement('section');
+    s.innerHTML = '<h2>'+gname+'</h2>';
+    const w = document.createElement('div'); w.className='tools';
+    for (const [id,T] of items){
+      const label = T.geom==='line' ? fmt(T.w)+' m'
+                  : T.geom==='circle' ? 'ø '+fmt1(T.r*2)+' m'
+                  : T.geom==='point' ? 'ø '+fmt1(T.r*2)+' m' : 'Fläche';
+      w.appendChild(toolBtn(id, T.n, label, T.sw||T.fill));
+    }
+    s.appendChild(w); rail.appendChild(s);
+  }
+})();
+
+function toolBtn(id,name,width,color){
+  const b = document.createElement('button');
+  b.className = 'tool'; b.dataset.tool = id;
+  b.innerHTML = '<span class="sw" style="background:'+color+'"></span>'
+              + '<span class="nm">'+name+'</span>'
+              + '<span class="wd mono">'+width+'</span>';
+  b.addEventListener('click', ()=>setTool(id));
+  return b;
+}
+
+function setTool(t){
+  tool = t; mode = 'draw'; draft = null; scalePts = [];
+  if (t !== 'select') sel = null;
+  document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('on', b.dataset.tool===t));
+  document.getElementById('btnScale').classList.remove('on');
+  if (ext) endExtend();
+  cv.style.cursor = t==='select' ? 'default' : 'crosshair';
+  syncInspector(); updateHint(); draw();
+}
+
+/* ============================================================
+   Koordinaten
+   ============================================================ */
+const toWorld = s => ({x:(s.x-view.x)/view.k, y:(s.y-view.y)/view.k});
+const toScreen = p => ({x:p.x*view.k+view.x, y:p.y*view.k+view.y});
+const dist = (a,b) => Math.hypot(a.x-b.x, a.y-b.y);
+
+function fitToImage(){
+  if (!img) return;
+  const r = cv.getBoundingClientRect();
+  view.k = Math.min(r.width/img.width, r.height/img.height) * 0.94;
+  view.x = (r.width - img.width*view.k)/2;
+  view.y = (r.height - img.height*view.k)/2;
+}
+
+function resize(){
+  const dpr = window.devicePixelRatio || 1;
+  const r = cv.getBoundingClientRect();
+  cv.width = Math.max(1, Math.round(r.width*dpr));
+  cv.height = Math.max(1, Math.round(r.height*dpr));
+  draw();
+}
+new ResizeObserver(resize).observe(stage);
+
+/* ============================================================
+   Kurvengeometrie – Ausrundung (Bogen) und Spline
+   Alle Radien intern in Weltpixeln, nach außen in Metern.
+   ============================================================ */
+function curveMode(el){ return el.cv || 'weich'; }
+function curveR(el){ const T = TYPES[el.t]; return el.cr ?? T.r0 ?? 0; }
+
+// Polylinie mit an jeder Ecke eingepasstem Kreisbogen
+function filletGeom(raw, r, closed){
+  const n = raw.length, out = [], corners = [];
+  if (n < 3) return {pts:raw.slice(), corners};
+  const first = closed ? 0 : 1, last = closed ? n-1 : n-2;
+  if (!closed) out.push(raw[0]);
+  for (let i = first; i <= last; i++){
+    const a = raw[(i-1+n)%n], b = raw[i], c = raw[(i+1)%n];
+    const v1 = {x:a.x-b.x, y:a.y-b.y}, v2 = {x:c.x-b.x, y:c.y-b.y};
+    const l1 = Math.hypot(v1.x,v1.y), l2 = Math.hypot(v2.x,v2.y);
+    if (l1 < 1e-6 || l2 < 1e-6){ out.push(b); continue; }
+    const u1 = {x:v1.x/l1, y:v1.y/l1}, u2 = {x:v2.x/l2, y:v2.y/l2};
+    const ang = Math.acos(Math.max(-1, Math.min(1, u1.x*u2.x + u1.y*u2.y))); // Innenwinkel
+    if (ang > Math.PI - 0.02){ out.push(b); continue; }                      // gerade
+    if (r <= 0 || ang < 0.02){ out.push(b); corners.push({p:b, r:0}); continue; }
+    let rEff = r, t = r/Math.tan(ang/2);
+    const tmax = Math.min(l1, l2)*0.5;
+    if (t > tmax){ t = tmax; rEff = t*Math.tan(ang/2); }
+    const p1 = {x:b.x+u1.x*t, y:b.y+u1.y*t}, p2 = {x:b.x+u2.x*t, y:b.y+u2.y*t};
+    const bis = {x:u1.x+u2.x, y:u1.y+u2.y}, bl = Math.hypot(bis.x,bis.y);
+    const d = rEff/Math.sin(ang/2);
+    const ctr = {x:b.x + bis.x/bl*d, y:b.y + bis.y/bl*d};
+    let a1 = Math.atan2(p1.y-ctr.y, p1.x-ctr.x), a2 = Math.atan2(p2.y-ctr.y, p2.x-ctr.x);
+    let da = a2-a1;
+    while (da >  Math.PI) da -= 2*Math.PI;
+    while (da < -Math.PI) da += 2*Math.PI;
+    const steps = Math.max(2, Math.ceil(Math.abs(da)/0.15));
+    for (let k = 0; k <= steps; k++){
+      const t2 = a1 + da*k/steps;
+      out.push({x:ctr.x + Math.cos(t2)*rEff, y:ctr.y + Math.sin(t2)*rEff});
+    }
+    corners.push({p:{x:ctr.x + Math.cos(a1+da/2)*rEff, y:ctr.y + Math.sin(a1+da/2)*rEff}, r:rEff});
+  }
+  if (!closed) out.push(raw[n-1]);
+  return {pts:out, corners};
+}
+
+// Zentripetaler Catmull-Rom-Spline durch alle Punkte
+function splineGeom(raw, closed){
+  const n = raw.length;
+  if (n < 3) return {pts:raw.slice(), corners:[]};
+  const get = i => closed ? raw[((i%n)+n)%n] : raw[Math.max(0, Math.min(n-1, i))];
+  const knot = (t,a,b) => t + Math.pow(Math.max(Math.hypot(b.x-a.x, b.y-a.y), 1e-4), 0.5);
+  const mix = (a,b,ta,tb,t) => {
+    const f = (tb-t)/(tb-ta), g2 = (t-ta)/(tb-ta);
+    return {x:a.x*f + b.x*g2, y:a.y*f + b.y*g2};
+  };
+  const out = [];
+  const segs = closed ? n : n-1;
+  for (let i = 0; i < segs; i++){
+    const p0 = get(i-1), p1 = get(i), p2 = get(i+1), p3 = get(i+2);
+    const t0 = 0, t1 = knot(t0,p0,p1), t2 = knot(t1,p1,p2), t3 = knot(t2,p2,p3);
+    const steps = Math.max(6, Math.min(40, Math.round(Math.hypot(p2.x-p1.x, p2.y-p1.y)/(0.5*ppm))));
+    for (let k = 0; k < steps; k++){
+      const t = t1 + (t2-t1)*k/steps;
+      const A1 = mix(p0,p1,t0,t1,t), A2 = mix(p1,p2,t1,t2,t), A3 = mix(p2,p3,t2,t3,t);
+      const B1 = mix(A1,A2,t0,t2,t), B2 = mix(A2,A3,t1,t3,t);
+      out.push(mix(B1,B2,t1,t2,t));
+    }
+  }
+  out.push(closed ? raw[0] : raw[n-1]);
+  return {pts:out, corners:[]};
+}
+
+// Gezeichnete Linie eines Elements (gesampelt)
+function shape(el){
+  const T = TYPES[el.t];
+  if (T.render === 'zebra' || el.pts.length < 3) return {pts:el.pts, corners:[]};
+  const closed = T.geom === 'area';
+  if (curveMode(el) === 'weich') return splineGeom(el.pts, closed);
+  return filletGeom(el.pts, curveR(el)*ppm, closed);
+}
+
+// Bogenlängen-Hilfen -------------------------------------------------
+function pathParts(P){
+  const seg = []; let total = 0;
+  for (let i = 0; i < P.length-1; i++){ const d = dist(P[i], P[i+1]); seg.push(d); total += d; }
+  return {seg, total};
+}
+
+// Weg an den Trennstellen (normierte Bogenlänge) in Abschnitte zerlegen
+function splitPath(P, cuts){
+  if (!cuts || !cuts.length || P.length < 2) return [P];
+  const {seg, total} = pathParts(P);
+  if (!total) return [P];
+  const targets = cuts.map(c => c*total).filter(v => v > 0 && v < total).sort((a,b)=>a-b);
+  if (!targets.length) return [P];
+  const out = []; let cur = [P[0]], acc = 0, ti = 0;
+  for (let i = 0; i < P.length-1; i++){
+    const start = acc;
+    while (ti < targets.length && targets[ti] <= acc + seg[i]){
+      const f = seg[i] ? (targets[ti]-start)/seg[i] : 0;
+      const q = {x:P[i].x + (P[i+1].x-P[i].x)*f, y:P[i].y + (P[i+1].y-P[i].y)*f};
+      cur.push(q); out.push(cur); cur = [q]; ti++;
+    }
+    cur.push(P[i+1]); acc += seg[i];
+  }
+  out.push(cur);
+  return out;
+}
+
+// Normierte Position des nächstgelegenen Punktes auf dem Weg
+function paramAt(P, p){
+  const {seg, total} = pathParts(P);
+  if (!total) return 0;
+  let bd = Infinity, best = 0, acc = 0;
+  for (let i = 0; i < P.length-1; i++){
+    const a = P[i], b = P[i+1], dx = b.x-a.x, dy = b.y-a.y, l2 = dx*dx + dy*dy;
+    let t = l2 ? ((p.x-a.x)*dx + (p.y-a.y)*dy)/l2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    const q = {x:a.x + t*dx, y:a.y + t*dy}, d = dist(p, q);
+    if (d < bd){ bd = d; best = (acc + t*seg[i])/total; }
+    acc += seg[i];
+  }
+  return best;
+}
+
+// Punkt und Richtung an normierter Position
+function pointAt(P, u){
+  const {seg, total} = pathParts(P);
+  let target = u*total, acc = 0;
+  for (let i = 0; i < P.length-1; i++){
+    if (acc + seg[i] >= target || i === P.length-2){
+      const f = seg[i] ? (target-acc)/seg[i] : 0;
+      const a = P[i], b = P[i+1], l = seg[i] || 1;
+      return {p:{x:a.x + (b.x-a.x)*f, y:a.y + (b.y-a.y)*f}, u:{x:(b.x-a.x)/l, y:(b.y-a.y)/l}};
+    }
+    acc += seg[i];
+  }
+  return {p:P[0], u:{x:1,y:0}};
+}
+
+// Punkt auf der Kurve zwischen zwei Stützpunkten
+function curvePointBetween(el, i){
+  const raw = el.pts, n = raw.length;
+  const closed = TYPES[el.t].geom === 'area';
+  const a = raw[i], b = raw[(i+1)%n];
+  if (curveMode(el) !== 'weich' || n < 3) return {x:(a.x+b.x)/2, y:(a.y+b.y)/2};
+  const get = k => closed ? raw[((k%n)+n)%n] : raw[Math.max(0, Math.min(n-1, k))];
+  const p0 = get(i-1), p1 = get(i), p2 = get(i+1), p3 = get(i+2);
+  const knot = (t,x,y) => t + Math.pow(Math.max(Math.hypot(y.x-x.x, y.y-x.y), 1e-4), 0.5);
+  const t0 = 0, t1 = knot(t0,p0,p1), t2 = knot(t1,p1,p2), t3 = knot(t2,p2,p3);
+  const mix = (x,y,ta,tb,t) => {
+    const f = (tb-t)/(tb-ta), g = (t-ta)/(tb-ta);
+    return {x:x.x*f + y.x*g, y:x.y*f + y.y*g};
+  };
+  const t = (t1+t2)/2;
+  const A1 = mix(p0,p1,t0,t1,t), A2 = mix(p1,p2,t1,t2,t), A3 = mix(p2,p3,t2,t3,t);
+  const B1 = mix(A1,A2,t0,t2,t), B2 = mix(A2,A3,t1,t3,t);
+  return mix(B1,B2,t1,t2,t);
+}
+
+// Abschnitte -----------------------------------------------------------
+function segCount(el){ return (el.cuts ? el.cuts.length : 0) + 1; }
+function segAt(el, u){
+  if (!el.cuts) return 0;
+  let i = 0; while (i < el.cuts.length && el.cuts[i] < u) i++;
+  return i;
+}
+function ensureMk(el){
+  const n = segCount(el);
+  if (!el.mk) el.mk = [];
+  while (el.mk.length < n) el.mk.push({});
+  el.mk.length = n;
+}
+function addCut(el, u){
+  if (u <= 0.001 || u >= 0.999) return;
+  const i = segAt(el, u);
+  ensureMk(el);
+  el.mk.splice(i, 0, Object.assign({}, el.mk[i]));
+  el.cuts = (el.cuts || []); el.cuts.splice(i, 0, u);
+}
+function removeCut(el, idx){
+  if (!el.cuts || idx < 0 || idx >= el.cuts.length) return;
+  el.cuts.splice(idx, 1);
+  if (el.mk) el.mk.splice(idx+1, 1);
+  if (!el.cuts.length){ delete el.cuts; delete el.mk; }
+}
+function rootOf(el){
+  let guard = 0;
+  while (el && el.par && guard++ < 20){
+    const par = elements.find(x => x.id === el.par.id);
+    if (!par) break;
+    el = par;
+  }
+  return el;
+}
+
+// Krümmungsradius durch drei Punkte
+function circumR(a,b,c){
+  const ab = Math.hypot(b.x-a.x, b.y-a.y), bc = Math.hypot(c.x-b.x, c.y-b.y), ca = Math.hypot(a.x-c.x, a.y-c.y);
+  const cross = Math.abs((b.x-a.x)*(c.y-a.y) - (b.y-a.y)*(c.x-a.x));
+  if (cross < 1e-9 || ab < 1e-9 || bc < 1e-9) return Infinity;
+  return (ab*bc*ca)/(2*cross);
+}
+
+// Kleinster Radius eines Elements + zu enge Stellen (Meter)
+function curveInfo(el){
+  const T = TYPES[el.t];
+  const none = {min:Infinity, spots:[], rmin:T.rmin||0};
+  if (T.render === 'zebra' || el.pts.length < 3) return none;
+  if (T.geom !== 'line' && T.geom !== 'area') return none;
+  const rmin = T.rmin || 0;
+
+  if (curveMode(el) === 'bogen'){
+    if (curveR(el) <= 0) return none;                       // bewusst eckig, keine Prüfung
+    const g = filletGeom(el.pts, curveR(el)*ppm, T.geom==='area');
+    let min = Infinity; const spots = [];
+    for (const c of g.corners){
+      const rm = c.r/ppm;
+      if (rm < min) min = rm;
+      if (rmin && rm < rmin - 1e-6) spots.push({p:c.p, r:rm});
+    }
+    return {min, spots, rmin};
+  }
+
+  const P = splineGeom(el.pts, T.geom==='area').pts;
+  const R = [];
+  for (let i = 1; i < P.length-1; i++) R.push(circumR(P[i-1], P[i], P[i+1])/ppm);
+  let min = Infinity;
+  for (const v of R) if (v < min) min = v;
+  const spots = [];
+  let i = 0;
+  while (i < R.length){
+    if (rmin && R[i] < rmin){
+      let j = i, best = i;
+      while (j < R.length && R[j] < rmin){ if (R[j] < R[best]) best = j; j++; }
+      spots.push({p:P[best+1], r:R[best]});
+      i = j;
+    } else i++;
+  }
+  return {min, spots, rmin};
+}
+
+/* ============================================================
+   Zeichnen
+   ============================================================ */
+function poly(g, pts, close){
+  g.beginPath(); g.moveTo(pts[0].x, pts[0].y);
+  for (let i=1;i<pts.length;i++) g.lineTo(pts[i].x, pts[i].y);
+  if (close) g.closePath();
+}
+
+// Eine Markierungslinie zeichnen
+function drawMarkLine(g, P, style){
+  const m = MARKS[style];
+  if (!m || !m.w || P.length < 2) return;
+  g.lineWidth = Math.max(m.w*ppm, 0.6);
+  g.strokeStyle = MARK;
+  g.lineCap = 'butt';
+  g.setLineDash(m.dash ? m.dash.map(v => v*ppm) : []);
+  poly(g, P); g.stroke();
+  g.setLineDash([]);
+}
+
+// Markierung einer Seite, abschnittsweise
+function drawMark(g, el, S, off, side){
+  if (S.length < 2) return;
+  const P = off ? offsetPoly(S, off, false) : S;
+  const secs = splitPath(P, el.cuts);
+  for (let i = 0; i < secs.length; i++) drawMarkLine(g, secs[i], markOf(el, side, i));
+}
+
+// Stellplatzteiler quer zur Fahrtrichtung
+function drawTicks(g, S, w, pitch){
+  const step = pitch*ppm;
+  if (step < 4) return;
+  g.lineWidth = Math.max(0.12*ppm, 0.6);
+  g.strokeStyle = MARK;
+  g.lineCap = 'butt';
+  g.beginPath();
+  let acc = 0;
+  for (let i = 0; i < S.length-1; i++){
+    const a = S[i], b = S[i+1];
+    const len = dist(a,b);
+    if (len < 1e-6) continue;
+    const ux = (b.x-a.x)/len, uy = (b.y-a.y)/len;
+    let d = step - (acc % step);
+    while (d < len){
+      const p = {x:a.x + ux*d, y:a.y + uy*d};
+      g.moveTo(p.x - uy*w/2, p.y + ux*w/2);
+      g.lineTo(p.x + uy*w/2, p.y - ux*w/2);
+      d += step;
+    }
+    acc += len;
+  }
+  g.stroke();
+}
+
+// Schraffur einer Fläche (Sperrfläche)
+function drawHatch(g, pts, spacing){
+  let x0=Infinity, y0=Infinity, x1=-Infinity, y1=-Infinity;
+  for (const p of pts){
+    x0=Math.min(x0,p.x); y0=Math.min(y0,p.y); x1=Math.max(x1,p.x); y1=Math.max(y1,p.y);
+  }
+  const h = y1-y0, step = Math.max(spacing*ppm, 3);
+  g.save();
+  poly(g, pts, true); g.clip();
+  g.lineWidth = Math.max(0.15*ppm, 0.7);
+  g.strokeStyle = MARK;
+  g.beginPath();
+  for (let x = x0 - h; x < x1 + step; x += step){ g.moveTo(x, y0); g.lineTo(x + h, y1); }
+  g.stroke();
+  g.restore();
+}
+
+function markOf(el, side, seg){
+  const T = TYPES[el.t];
+  const key = side === 'l' ? 'ml' : side === 'r' ? 'mr' : 'mid';
+  if (el.mk && seg != null && el.mk[seg] && el.mk[seg][key] !== undefined) return el.mk[seg][key];
+  return el[key] ?? (T.mark ? (T.mark[side === 'mid' ? 'mid' : side] ?? '') : '');
+}
+
+function drawBand(g, el, T){
+  if (el.pts.length < 2) return;
+  const S = shape(el).pts;
+  const w = (el.w ?? T.w) * ppm;
+  g.lineJoin = 'round'; g.lineCap = 'butt';
+  if (T.border){
+    g.setLineDash(T.border.dash ? T.border.dash.map(v=>v*ppm) : []);
+    g.lineWidth = w + 2*T.border.w*ppm;
+    g.strokeStyle = T.border.c;
+    poly(g, S); g.stroke();
+    g.setLineDash([]);
+  }
+  g.lineWidth = w + 0.7/renderScale;   // Haaransatz zwischen Nachbarspuren vermeiden
+  g.strokeStyle = T.fill;
+  poly(g, S); g.stroke();
+  if (T.ticks) drawTicks(g, S, w, T.ticks);
+  drawMark(g, el, S,  w/2, 'l');
+  drawMark(g, el, S, -w/2, 'r');
+  drawMark(g, el, S,  0,   'mid');
+}
+
+function drawZebra(g, el, T){
+  if (el.pts.length < 2) return;
+  const w = (el.w ?? T.w) * ppm;          // Tiefe des Überwegs, längs der Fahrbahn
+  const bar = 0.5*ppm, gap = 0.5*ppm;     // Streifen 0,5 m, Lücke 0,5 m
+  const S = el.pts;
+  g.lineJoin = 'round'; g.lineCap = 'butt';
+  g.globalAlpha = 0.75; g.lineWidth = w; g.strokeStyle = ASPHALT;
+  poly(g, S); g.stroke(); g.globalAlpha = 1;
+
+  // Streifen quer zur Gehrichtung, also parallel zur Fahrbahnachse
+  const step = bar + gap;
+  g.fillStyle = '#f4f2ec';
+  for (let s2 = 0; s2 < S.length-1; s2++){
+    const a2 = S[s2], b2 = S[s2+1], len = dist(a2, b2);
+    if (len < 0.001) continue;
+    const dx = (b2.x-a2.x)/len, dy = (b2.y-a2.y)/len;
+    const nx = -dy, ny = dx;
+    const n = Math.max(1, Math.floor((len + gap)/step));
+    const start = (len - (n*bar + (n-1)*gap))/2;
+    for (let i = 0; i < n; i++){
+      const o1 = start + i*step, o2 = o1 + bar;
+      const c1 = {x:a2.x + dx*o1, y:a2.y + dy*o1};
+      const c2 = {x:a2.x + dx*o2, y:a2.y + dy*o2};
+      g.beginPath();
+      g.moveTo(c1.x - nx*w/2, c1.y - ny*w/2);
+      g.lineTo(c1.x + nx*w/2, c1.y + ny*w/2);
+      g.lineTo(c2.x + nx*w/2, c2.y + ny*w/2);
+      g.lineTo(c2.x - nx*w/2, c2.y - ny*w/2);
+      g.closePath(); g.fill();
+    }
+  }
+}
+
+function drawArea(g, el, T){
+  if (el.pts.length < 3) return;
+  const S = shape(el).pts;
+  poly(g, S, true);
+  g.fillStyle = T.fill; g.fill();
+  if (T.hatch) drawHatch(g, S, T.hatch);
+  if (T.border){
+    poly(g, S, true);
+    g.lineWidth = T.border.w*ppm; g.strokeStyle = T.border.c; g.stroke();
+  }
+}
+
+function drawCircleEl(g, el, T){
+  const R = (el.r ?? T.r) * ppm, w = (el.w ?? T.w) * ppm;
+  const c = el.pts[0];
+  if (R <= 0) return;
+  g.beginPath(); g.arc(c.x, c.y, Math.max(R-w, 0.1), 0, Math.PI*2);
+  g.fillStyle = GREEN; g.fill();
+  g.beginPath(); g.arc(c.x, c.y, Math.max(R-w/2, 0.1), 0, Math.PI*2);
+  g.lineWidth = w; g.strokeStyle = ASPHALT; g.stroke();
+  g.lineWidth = 0.12*ppm; g.strokeStyle = MARK;
+  g.beginPath(); g.arc(c.x, c.y, R, 0, Math.PI*2); g.stroke();
+}
+
+function drawPointEl(g, el, T){
+  const r = (el.r ?? T.r) * ppm, c = el.pts[0];
+  g.globalAlpha = 0.85;
+  g.beginPath(); g.arc(c.x, c.y, r, 0, Math.PI*2);
+  g.fillStyle = T.fill; g.fill();
+  g.globalAlpha = 1;
+  g.beginPath(); g.arc(c.x, c.y, Math.max(r*0.18, 0.15*ppm), 0, Math.PI*2);
+  g.fillStyle = '#33502a'; g.fill();
+}
+
+function drawElement(g, el){
+  const T = TYPES[el.t]; if (!T) return;
+  if (T.render === 'zebra') return drawZebra(g, el, T);
+  if (T.geom === 'line')   return drawBand(g, el, T);
+  if (T.geom === 'area')   return drawArea(g, el, T);
+  if (T.geom === 'circle') return drawCircleEl(g, el, T);
+  if (T.geom === 'point')  return drawPointEl(g, el, T);
+}
+
+function renderScene(g){
+  if (img){ g.globalAlpha = imgOpacity; g.drawImage(img, 0, 0); g.globalAlpha = 1; }
+  if (hideDesign) return;
+  const sorted = elements.slice().sort((a,b)=>TYPES[a.t].z - TYPES[b.t].z);
+  for (const el of sorted) drawElement(g, el);
+}
+
+function drawGrid(){
+  if (!showGrid) return;
+  const step = 5*ppm;
+  if (step*view.k < 6) return;
+  const r = cv.getBoundingClientRect();
+  const a = toWorld({x:0,y:0}), b = toWorld({x:r.width,y:r.height});
+  ctx.lineWidth = 1/view.k;
+  ctx.strokeStyle = 'rgba(128,138,136,.28)';
+  ctx.beginPath();
+  for (let x = Math.floor(a.x/step)*step; x < b.x; x += step){ ctx.moveTo(x,a.y); ctx.lineTo(x,b.y); }
+  for (let y = Math.floor(a.y/step)*step; y < b.y; y += step){ ctx.moveTo(a.x,y); ctx.lineTo(b.x,y); }
+  ctx.stroke();
+}
+
+// Gekoppelte Nachbarspuren aus ihrer Bezugsspur ableiten
+function solveLinks(){
+  for (const el of elements){
+    if (!el.par) continue;
+    const par = elements.find(x => x.id === el.par.id);
+    const T = TYPES[el.t];
+    if (!par || TYPES[par.t].geom !== 'line' || T.geom !== 'line'){ delete el.par; continue; }
+    const PT = TYPES[par.t];
+    const off = el.par.side * (((par.w ?? PT.w) + (el.w ?? T.w))/2) * ppm;
+    el.pts = offsetPoly(par.pts, off, false);
+    el.cv = par.cv; el.cr = par.cr;
+    if (par.cuts){ el.cuts = par.cuts.slice(); ensureMk(el); }
+    else if (el.cuts){ delete el.cuts; delete el.mk; }
+  }
+}
+
+function unlink(el){ if (el && el.par) delete el.par; }
+
+function draw(){
+  solveLinks();
+  const dpr = window.devicePixelRatio || 1;
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.fillStyle = cssv('--stage') || '#111';
+  ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.setTransform(dpr*view.k, 0, 0, dpr*view.k, dpr*view.x, dpr*view.y);
+  ctx.imageSmoothingQuality = 'high';
+
+  drawGrid();
+  renderScale = view.k;
+  renderScene(ctx);
+
+  // Entwurf in Arbeit
+  if (draft){
+    ctx.globalAlpha = 0.75; drawElement(ctx, draft); ctx.globalAlpha = 1;
+    ctx.lineWidth = 1.5/view.k; ctx.strokeStyle = cssv('--accent-bg');
+    if (draft.pts.length > 1 && TYPES[draft.t].geom !== 'circle'){ poly(ctx, draft.pts); ctx.stroke(); }
+    for (const p of draft.pts) handle(p);
+  }
+
+  // Auswahl
+  if (sel){
+    const el = elements.find(e=>e.id===sel);
+    if (el){
+      ctx.strokeStyle = cssv('--accent-bg'); ctx.lineWidth = 1.5/view.k;
+      ctx.setLineDash([6/view.k, 4/view.k]);
+      const T = TYPES[el.t];
+      if (T.geom === 'circle'){
+        ctx.beginPath(); ctx.arc(el.pts[0].x, el.pts[0].y, (el.r??T.r)*ppm, 0, Math.PI*2); ctx.stroke();
+      } else if (T.geom === 'point'){
+        ctx.beginPath(); ctx.arc(el.pts[0].x, el.pts[0].y, (el.r??T.r)*ppm + 2/view.k, 0, Math.PI*2); ctx.stroke();
+      } else {
+        poly(ctx, shape(el).pts, T.geom==='area'); ctx.stroke();
+      }
+      ctx.setLineDash([]);
+      if (el.cuts && T.geom === 'line'){
+        const S = shape(el).pts, w = (el.w ?? T.w)*ppm;
+        const secs = splitPath(S, el.cuts);
+        const act = secs[Math.min(selSeg, secs.length-1)];
+        if (act && act.length > 1){
+          ctx.save();
+          ctx.globalAlpha = 0.30; ctx.lineCap = 'butt'; ctx.lineJoin = 'round';
+          ctx.strokeStyle = cssv('--accent-bg'); ctx.lineWidth = w;
+          poly(ctx, act); ctx.stroke();
+          ctx.restore();
+        }
+        for (let i = 0; i < el.cuts.length; i++){
+          const at = pointAt(S, el.cuts[i]);
+          const nx = at.u.y, ny = -at.u.x;
+          const edge = (i === selSeg-1 || i === selSeg);
+          ctx.lineWidth = (edge ? 2.5 : 1.5)/view.k;
+          ctx.strokeStyle = cssv('--accent-bg');
+          ctx.globalAlpha = edge ? 1 : 0.5;
+          const reach = w*(edge ? 0.72 : 0.58);
+          ctx.beginPath();
+          ctx.moveTo(at.p.x - nx*reach, at.p.y - ny*reach);
+          ctx.lineTo(at.p.x + nx*reach, at.p.y + ny*reach);
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+      }
+      for (const p of el.pts) handle(p);
+      if (T.geom === 'circle') handle({x:el.pts[0].x + (el.r??T.r)*ppm, y:el.pts[0].y});
+    }
+  }
+
+  // Maßstabs-Messung
+  if (mode === 'scale'){
+    const pts = scalePts.slice();
+    if (pts.length === 1 && cursor) pts.push(cursor);
+    if (pts.length === 2){
+      ctx.strokeStyle = cssv('--accent-bg'); ctx.lineWidth = 2/view.k;
+      poly(ctx, pts); ctx.stroke();
+      for (const p of pts) handle(p);
+    } else if (pts.length === 1) handle(pts[0]);
+  }
+
+  if (snapMark){
+    const m = snapMark.p;
+    ctx.strokeStyle = cssv('--accent-bg'); ctx.lineWidth = 1.5/view.k;
+    if (snapMark.kind === 'e'){
+      const n = snapMark.n, l = 9/view.k;
+      ctx.beginPath();
+      ctx.moveTo(m.x - n.x*l, m.y - n.y*l);
+      ctx.lineTo(m.x + n.x*l, m.y + n.y*l);
+      ctx.stroke();
+      ctx.beginPath(); ctx.arc(m.x, m.y, 3/view.k, 0, Math.PI*2); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.arc(m.x, m.y, 6/view.k, 0, Math.PI*2); ctx.stroke();
+    }
+  }
+
+  drawWarnings();
+  drawBadges();
+
+  // Startzustand
+  if (!img && elements.length===0 && !draft){
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    const r = cv.getBoundingClientRect();
+    ctx.fillStyle = cssv('--ink3');
+    ctx.font = '500 15px Archivo, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Luftbild hierher ziehen, einfügen (Strg+V) oder oben links laden', r.width/2, r.height/2);
+    ctx.textAlign = 'start';
+  }
+  updateScalebar();
+}
+
+// Plusmarken am ausgewählten Weg: Punkt einfügen / verlängern
+function badgesFor(el){
+  const out = [];
+  if (!el || ext) return out;
+  const T = TYPES[el.t];
+  if (T.render === 'zebra' || (T.geom !== 'line' && T.geom !== 'area')) return out;
+  const n = el.pts.length;
+  const segs = T.geom === 'area' ? n : n-1;
+  for (let i = 0; i < segs; i++){
+    const a = toScreen(el.pts[i]), b = toScreen(el.pts[(i+1)%n]);
+    if (Math.hypot(a.x-b.x, a.y-b.y) < 40) continue;
+    out.push({kind:'ins', i, p:curvePointBetween(el, i)});
+  }
+  if (T.geom === 'line' && !T.maxPts && n >= 2){
+    const S = shape(el).pts;
+    const d = 22/view.k;
+    for (const atStart of [true, false]){
+      const a = atStart ? S[1] : S[S.length-2];
+      const b = atStart ? S[0] : S[S.length-1];
+      const l = Math.hypot(b.x-a.x, b.y-a.y) || 1;
+      out.push({kind:'ext', atStart, p:{x:b.x + (b.x-a.x)/l*d, y:b.y + (b.y-a.y)/l*d}});
+    }
+  }
+  return out;
+}
+
+function drawBadges(){
+  badgeHits = [];
+  const el = elements.find(e => e.id === sel);
+  if (!el || hideDesign) return;
+  const dpr = window.devicePixelRatio || 1;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const acc = cssv('--accent-bg'), ink = cssv('--accent-ink');
+  ctx.font = '700 13px "Archivo", sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (const b of badgesFor(el)){
+    const sp = toScreen(b.p);
+    badgeHits.push({kind:b.kind, i:b.i, atStart:b.atStart, s:sp});
+    ctx.beginPath(); ctx.arc(sp.x, sp.y, 8, 0, Math.PI*2);
+    ctx.fillStyle = acc; ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = ink; ctx.fillText('+', sp.x, sp.y + 0.5);
+  }
+  // Welcher Abschnitt gerade bearbeitet wird
+  const T = TYPES[el.t];
+  if (el.cuts && el.cuts.length && T.geom === 'line'){
+    const secs = splitPath(shape(el).pts, el.cuts);
+    const act = secs[Math.min(selSeg, secs.length-1)];
+    if (act && act.length > 1){
+      const sp = toScreen(pointAt(act, 0.5).p);
+      const label = 'Abschnitt ' + (selSeg+1) + '/' + secs.length;
+      ctx.font = '600 11px "Archivo", sans-serif';
+      const tw = ctx.measureText(label).width;
+      ctx.fillStyle = cssv('--chrome'); ctx.strokeStyle = acc; ctx.lineWidth = 1;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(sp.x - tw/2 - 7, sp.y - 26, tw + 14, 18, 9);
+      else ctx.rect(sp.x - tw/2 - 7, sp.y - 26, tw + 14, 18);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = cssv('--ink');
+      ctx.fillText(label, sp.x, sp.y - 16.5);
+    }
+  }
+  ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic';
+}
+
+function drawWarnings(){
+  if (!checkRadii || hideDesign) return;
+  const dpr = window.devicePixelRatio || 1;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const warn = cssv('--warn') || '#d05a3c';
+  ctx.font = '600 11px "IBM Plex Mono", ui-monospace, monospace';
+  ctx.textBaseline = 'middle';
+  for (const el of elements.concat(draft ? [draft] : [])){
+    const info = curveInfo(el);
+    for (const sp of info.spots){
+      const s = toScreen(sp.p);
+      ctx.beginPath(); ctx.arc(s.x, s.y, 7, 0, Math.PI*2);
+      ctx.lineWidth = 2; ctx.strokeStyle = warn; ctx.stroke();
+      const label = 'R ' + fmt1(sp.r) + ' m';
+      const w = ctx.measureText(label).width;
+      ctx.fillStyle = cssv('--chrome'); ctx.strokeStyle = warn; ctx.lineWidth = 1;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(s.x+11, s.y-9, w+10, 18, 4);
+      else ctx.rect(s.x+11, s.y-9, w+10, 18);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = warn; ctx.fillText(label, s.x+16, s.y+1);
+    }
+  }
+  ctx.textBaseline = 'alphabetic';
+}
+
+function handle(p){
+  const s = 4/view.k;
+  ctx.fillStyle = cssv('--accent-bg');
+  ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.lineWidth = 1/view.k;
+  ctx.fillRect(p.x-s, p.y-s, s*2, s*2);
+  ctx.strokeRect(p.x-s, p.y-s, s*2, s*2);
+}
+
+function updateScalebar(){
+  const box = document.getElementById('scalebar');
+  if (!calibrated){ box.hidden = true; return; }
+  box.hidden = false;
+  const nice = [1,2,5,10,20,25,50,100,200,500];
+  let m = nice[nice.length-1];
+  for (const v of nice){ if (v*ppm*view.k >= 60){ m = v; break; } }
+  if (m*ppm*view.k > 260) m = 1;
+  document.getElementById('scalebarLabel').textContent = fmt1(m)+' m';
+  document.getElementById('scalebarBar').style.width = Math.round(m*ppm*view.k)+'px';
+}
+
+/* ============================================================
+   Treffer & Fangen
+   ============================================================ */
+function distToSeg(p,a,b){
+  const dx=b.x-a.x, dy=b.y-a.y, l2=dx*dx+dy*dy;
+  if (l2===0) return dist(p,a);
+  let t = ((p.x-a.x)*dx + (p.y-a.y)*dy)/l2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(p.x-(a.x+t*dx), p.y-(a.y+t*dy));
+}
+function inPoly(p, pts){
+  let hit = false;
+  for (let i=0, j=pts.length-1; i<pts.length; j=i++){
+    if ((pts[i].y>p.y)!==(pts[j].y>p.y) &&
+        p.x < (pts[j].x-pts[i].x)*(p.y-pts[i].y)/(pts[j].y-pts[i].y)+pts[i].x) hit = !hit;
+  }
+  return hit;
+}
+function hitElement(p){
+  const tol = 6/view.k;
+  const ordered = elements.slice().sort((a,b)=>TYPES[b.t].z - TYPES[a.t].z);
+  for (const el of ordered){
+    const T = TYPES[el.t];
+    if (T.geom === 'line'){
+      const S = shape(el).pts;
+      const half = (el.w??T.w)*ppm/2 + tol;
+      for (let i=0;i<S.length-1;i++)
+        if (distToSeg(p, S[i], S[i+1]) < half) return el;
+    } else if (T.geom === 'area'){
+      const S = shape(el).pts;
+      if (inPoly(p, S)) return el;
+      for (let i=0;i<S.length;i++)
+        if (distToSeg(p, S[i], S[(i+1)%S.length]) < tol) return el;
+    } else if (T.geom === 'circle'){
+      if (dist(p, el.pts[0]) <= (el.r??T.r)*ppm + tol) return el;
+    } else if (T.geom === 'point'){
+      if (dist(p, el.pts[0]) <= (el.r??T.r)*ppm + tol) return el;
+    }
+  }
+  return null;
+}
+function hitHandle(p){
+  const el = elements.find(e=>e.id===sel); if (!el) return null;
+  const tol = 8/view.k, T = TYPES[el.t];
+  for (let i=0;i<el.pts.length;i++) if (dist(p, el.pts[i]) < tol) return {el, i};
+  if (T.geom === 'circle'){
+    const h = {x:el.pts[0].x + (el.r??T.r)*ppm, y:el.pts[0].y};
+    if (dist(p,h) < tol) return {el, i:'r'};
+  }
+  return null;
+}
+function snap(p, skip){
+  const tol = 11/view.k; let best = null, bd = tol;
+  for (const el of elements){
+    if (TYPES[el.t].geom === 'circle' || TYPES[el.t].geom === 'point') continue;
+    for (const q of el.pts){ const d = dist(p,q); if (d < bd && el !== skip){ bd = d; best = q; } }
+  }
+  return best ? {x:best.x, y:best.y} : null;
+}
+// Nächster Punkt auf einer gezeichneten Linie samt Richtung
+function nearestOnPath(p, S){
+  let best = null, bd = Infinity;
+  for (let i = 0; i < S.length-1; i++){
+    const a = S[i], b = S[i+1];
+    const dx = b.x-a.x, dy = b.y-a.y, l2 = dx*dx + dy*dy;
+    if (l2 < 1e-9) continue;
+    let t = ((p.x-a.x)*dx + (p.y-a.y)*dy)/l2;
+    t = Math.max(0, Math.min(1, t));
+    const q = {x:a.x + t*dx, y:a.y + t*dy}, d = dist(p, q);
+    if (d < bd){ const l = Math.sqrt(l2); bd = d; best = {q, u:{x:dx/l, y:dy/l}}; }
+  }
+  return best;
+}
+
+// Bündig an die Nachbarspur: Achsabstand = halbe Breite + halbe Breite
+function edgeSnap(p, self, w){
+  if (!w) return null;
+  const tol = 16/view.k;
+  let best = null, bd = tol;
+  for (const el of elements){
+    if (el === self) continue;
+    const T = TYPES[el.t];
+    if (T.geom !== 'line' || T.render === 'zebra') continue;
+    const S = shape(el).pts;
+    if (S.length < 2) continue;
+    const np = nearestOnPath(p, S);
+    if (!np) continue;
+    const off = (((el.w ?? T.w) + w)/2) * ppm;
+    const nx = np.u.y, ny = -np.u.x;
+    for (const sgn of [1,-1]){
+      const c = {x:np.q.x + nx*sgn*off, y:np.q.y + ny*sgn*off};
+      const d = dist(p, c);
+      if (d < bd){ bd = d; best = {p:c, n:{x:nx*sgn, y:ny*sgn}}; }
+    }
+  }
+  return best;
+}
+
+// Stützpunkt hat Vorrang vor Kante; Alt setzt den Fang aus
+function snapPoint(p, self, w){
+  if (altDown) return null;
+  const v = snap(p, self);
+  if (v) return {p:v, kind:'v'};
+  const e = edgeSnap(p, self, w);
+  return e ? {p:e.p, kind:'e', n:e.n} : null;
+}
+
+// Parallele Führung im Abstand d (Weltpixel, links positiv)
+function offsetPoly(pts, d, closed){
+  const n = pts.length, out = [];
+  const lnorm = (a,b) => {
+    const dx = b.x-a.x, dy = b.y-a.y, l = Math.hypot(dx,dy) || 1;
+    return {x:dy/l, y:-dx/l};
+  };
+  for (let i = 0; i < n; i++){
+    const n1 = (i > 0 || closed) ? lnorm(pts[(i-1+n)%n], pts[i]) : null;
+    const n2 = (i < n-1 || closed) ? lnorm(pts[i], pts[(i+1)%n]) : null;
+    let nv;
+    if (n1 && n2){
+      const b = {x:n1.x+n2.x, y:n1.y+n2.y}, bl = Math.hypot(b.x,b.y);
+      if (bl < 1e-6) nv = n2;
+      else {
+        const u = {x:b.x/bl, y:b.y/bl};
+        const k = Math.min(4, 1/Math.max(u.x*n1.x + u.y*n1.y, 0.25));
+        nv = {x:u.x*k, y:u.y*k};
+      }
+    } else nv = n1 || n2 || {x:0,y:0};
+    out.push({x:pts[i].x + nv.x*d, y:pts[i].y + nv.y*d});
+  }
+  return out;
+}
+
+function angleSnap(p, from){
+  const dx = p.x-from.x, dy = p.y-from.y;
+  const len = Math.hypot(dx,dy); if (!len) return p;
+  const step = Math.PI/12;
+  const a = Math.round(Math.atan2(dy,dx)/step)*step;
+  return {x:from.x + Math.cos(a)*len, y:from.y + Math.sin(a)*len};
+}
+
+/* ============================================================
+   Historie & Speicherung
+   ============================================================ */
+function snapshot(){ return JSON.stringify(elements); }
+function pushHistory(){
+  undoStack.push(snapshot());
+  if (undoStack.length > 80) undoStack.shift();
+  redoStack.length = 0;
+  syncHistoryButtons(); save();
+}
+function undo(){
+  if (!undoStack.length) return;
+  redoStack.push(snapshot());
+  elements = JSON.parse(undoStack.pop());
+  sel = null; draft = null; syncHistoryButtons(); syncInspector(); save(); draw();
+}
+function redo(){
+  if (!redoStack.length) return;
+  undoStack.push(snapshot());
+  elements = JSON.parse(redoStack.pop());
+  sel = null; draft = null; syncHistoryButtons(); syncInspector(); save(); draw();
+}
+function syncHistoryButtons(){
+  document.getElementById('btnUndo').disabled = !undoStack.length;
+  document.getElementById('btnRedo').disabled = !redoStack.length;
+}
+
+const KEY = 'strassenskizze.v1';
+let saveTimer = null;
+function save(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=>{
+    try{
+      const data = {ppm, calibrated, elements, uid};
+      if (imgSrc && imgSrc.length < 3.5e6) data.imgSrc = imgSrc;
+      localStorage.setItem(KEY, JSON.stringify(data));
+    }catch(e){ /* Speicher voll oder gesperrt – Zeichnen geht weiter */ }
+  }, 400);
+}
+function restore(){
+  let data = null;
+  try{ data = JSON.parse(localStorage.getItem(KEY) || 'null'); }catch(e){ data = null; }
+  if (!data) return;
+  ppm = data.ppm || ppm; calibrated = !!data.calibrated;
+  elements = Array.isArray(data.elements) ? data.elements : [];
+  uid = data.uid || (elements.length + 1);
+  syncScaleState();
+  if (data.imgSrc) loadImage(data.imgSrc);
+  else draw();
+}
+
+/* ============================================================
+   Bild
+   ============================================================ */
+function loadImage(src){
+  const i = new Image();
+  i.onload = ()=>{ img = i; imgSrc = src; fitToImage(); draw(); save(); };
+  i.src = src;
+}
+function readFile(f){
+  if (!f || !f.type.startsWith('image/')) return;
+  const r = new FileReader();
+  r.onload = ()=>loadImage(r.result);
+  r.readAsDataURL(f);
+}
+document.getElementById('file').addEventListener('change', e=>readFile(e.target.files[0]));
+stage.addEventListener('dragover', e=>{ e.preventDefault(); stage.classList.add('drop'); });
+stage.addEventListener('dragleave', ()=>stage.classList.remove('drop'));
+stage.addEventListener('drop', e=>{
+  e.preventDefault(); stage.classList.remove('drop');
+  readFile(e.dataTransfer.files[0]);
+});
+window.addEventListener('paste', e=>{
+  for (const it of e.clipboardData.files) if (it.type.startsWith('image/')) return readFile(it);
+});
+
+/* ============================================================
+   Maus / Zeigereingabe
+   ============================================================ */
+function localPt(e){
+  const r = cv.getBoundingClientRect();
+  return {x:e.clientX-r.left, y:e.clientY-r.top};
+}
+function newElement(t, pts){
+  const T = TYPES[t];
+  const el = {id:uid++, t, pts};
+  if (T.geom === 'line' || T.geom === 'circle') el.w = T.w;
+  if (T.geom === 'circle' || T.geom === 'point') el.r = T.r;
+  if ((T.geom === 'line' || T.geom === 'area') && T.r0 !== undefined){ el.cv = T.cv0 || 'weich'; el.cr = T.r0; }
+  return el;
+}
+function startExtend(el, atStart){
+  pushHistory();
+  ext = {el, atStart};
+  const p = atStart ? el.pts[0] : el.pts[el.pts.length-1];
+  if (atStart) el.pts.unshift({x:p.x, y:p.y}); else el.pts.push({x:p.x, y:p.y});
+  sel = el.id; cv.style.cursor = 'crosshair';
+  syncInspector(); updateHint(); draw();
+}
+function extLive(){
+  const el = ext.el;
+  return ext.atStart ? el.pts[0] : el.pts[el.pts.length-1];
+}
+function endExtend(){
+  if (!ext) return;
+  const el = ext.el;
+  if (ext.atStart) el.pts.shift(); else el.pts.pop();
+  ext = null; snapMark = null;
+  cv.style.cursor = tool === 'select' ? 'default' : 'crosshair';
+  syncInspector(); updateHint(); save(); draw();
+}
+
+function commitDraft(){
+  if (!draft) return;
+  const T = TYPES[draft.t];
+  const pts = draft.pts.slice(0, draft.live ? -1 : undefined);
+  if ((T.geom === 'line' && pts.length >= 2) || (T.geom === 'area' && pts.length >= 3)){
+    draft.pts = pts; delete draft.live;
+    pushHistory(); elements.push(draft);
+  }
+  draft = null; draw(); updateHint();
+}
+
+cv.addEventListener('pointerdown', e=>{
+  cv.setPointerCapture(e.pointerId);
+  const s = localPt(e), p = toWorld(s);
+  cursor = p;
+
+  if (e.button === 1 || spaceDown){ pan = {sx:s.x, sy:s.y, vx:view.x, vy:view.y}; return; }
+  if (e.button !== 0) return;
+
+  if (ext){
+    const T2 = TYPES[ext.el.t];
+    const sn = snapPoint(p, ext.el, T2.geom === 'line' ? (ext.el.w ?? T2.w) : 0);
+    const q = sn ? sn.p : p;
+    const live = extLive(); live.x = q.x; live.y = q.y;
+    if (ext.atStart) ext.el.pts.unshift({x:q.x, y:q.y});
+    else ext.el.pts.push({x:q.x, y:q.y});
+    draw(); return;
+  }
+
+  if (tool === 'cut'){
+    const hit = hitElement(p);
+    if (!hit) return;
+    const HT = TYPES[hit.t];
+    if (HT.geom !== 'line' || HT.render === 'zebra') return;
+    const el = rootOf(hit);
+    const S = shape(el).pts;
+    const u = paramAt(S, p);
+    pushHistory();
+    let removed = false;
+    if (el.cuts){
+      for (let i = 0; i < el.cuts.length; i++){
+        if (dist(pointAt(S, el.cuts[i]).p, p) < 12/view.k){ removeCut(el, i); removed = true; break; }
+      }
+    }
+    if (!removed) addCut(el, u);
+    sel = el.id; selSeg = segAt(el, u);
+    syncInspector(); draw(); return;
+  }
+
+  if (mode === 'scale'){
+    scalePts.push(p);
+    if (scalePts.length === 2) openScaleDialog();
+    draw(); return;
+  }
+
+  if (tool === 'select'){
+    for (const b of badgeHits){
+      if (Math.hypot(s.x-b.s.x, s.y-b.s.y) > 11) continue;
+      const el = elements.find(x => x.id === sel);
+      if (!el) break;
+      if (b.kind === 'ext'){ startExtend(rootOf(el), b.atStart); return; }
+      const target = rootOf(el);
+      pushHistory();
+      target.pts.splice(b.i+1, 0, curvePointBetween(target, b.i));
+      if (target !== el) sel = target.id;
+      syncInspector(); draw(); return;
+    }
+    const h = hitHandle(p);
+    if (h){ drag = {kind:'handle', before:snapshot(), ...h}; unlink(h.el); return; }
+    const el = hitElement(p);
+    sel = el ? el.id : null;
+    if (el){
+      selSeg = TYPES[el.t].geom === 'line' ? segAt(el, paramAt(shape(el).pts, p)) : 0;
+      drag = {kind:'move', before:snapshot(), el, last:p}; unlink(el);
+    }
+    syncInspector(); draw(); return;
+  }
+
+  const T = TYPES[tool];
+  const sn = snapPoint(p, null, T.geom === 'line' && T.render !== 'zebra' ? T.w : 0);
+  const sp = sn ? sn.p : p;
+  snapMark = sn;
+
+  if (T.geom === 'point'){
+    pushHistory(); elements.push(newElement(tool, [sp])); draw(); return;
+  }
+  if (T.geom === 'circle'){
+    if (!draft){ draft = newElement(tool, [sp]); draft.r = 0.001; }
+    else { if (draft.r < 1) draft.r = T.r; pushHistory(); elements.push(draft); draft = null; }
+    draw(); return;
+  }
+  if (!draft){
+    draft = newElement(tool, [sp, {x:sp.x, y:sp.y}]); draft.live = true;
+  } else {
+    draft.pts[draft.pts.length-1] = sp;
+    if (T.maxPts && draft.pts.length >= T.maxPts){ draft.live = false; commitDraft(); return; }
+    draft.pts.push({x:sp.x, y:sp.y});
+  }
+  draw(); updateHint();
+});
+
+cv.addEventListener('pointermove', e=>{
+  const s = localPt(e), p = toWorld(s);
+  cursor = p;
+
+  if (pan){ view.x = pan.vx + (s.x-pan.sx); view.y = pan.vy + (s.y-pan.sy); draw(); return; }
+
+  if (drag){
+    if (drag.kind === 'move'){
+      const dx = p.x-drag.last.x, dy = p.y-drag.last.y;
+      for (const q of drag.el.pts){ q.x += dx; q.y += dy; }
+      drag.last = p; draw(); return;
+    }
+    if (drag.i === 'r'){
+      drag.el.r = Math.max(2, dist(p, drag.el.pts[0])/ppm);
+      syncInspector(); draw(); return;
+    }
+    const dT = TYPES[drag.el.t];
+    const dw = dT.geom === 'line' && dT.render !== 'zebra' ? (drag.el.w ?? dT.w) : 0;
+    const sn = snapPoint(p, drag.el, dw);
+    drag.el.pts[drag.i] = sn ? sn.p : p;
+    snapMark = sn; draw(); return;
+  }
+
+  if (ext){
+    const T2 = TYPES[ext.el.t];
+    const sn = snapPoint(p, ext.el, T2.geom === 'line' ? (ext.el.w ?? T2.w) : 0);
+    const live = extLive();
+    const q = sn ? sn.p : (shiftDown ? angleSnap(p, ext.atStart ? ext.el.pts[1] : ext.el.pts[ext.el.pts.length-2]) : p);
+    live.x = q.x; live.y = q.y; snapMark = sn; draw(); return;
+  }
+
+  if (draft){
+    const T = TYPES[draft.t];
+    if (T.geom === 'circle'){ draft.r = Math.max(0.001, dist(p, draft.pts[0])/ppm); draw(); return; }
+    const dw = T.geom === 'line' && T.render !== 'zebra' ? (draft.w ?? T.w) : 0;
+    const sn = snapPoint(p, draft, dw);
+    const q = sn ? sn.p
+      : (shiftDown && draft.pts.length > 1 ? angleSnap(p, draft.pts[draft.pts.length-2]) : p);
+    snapMark = sn;
+    draft.pts[draft.pts.length-1] = q; draw(); return;
+  }
+
+  if (mode === 'scale'){ draw(); return; }
+  const before = snapMark;
+  const hT = tool !== 'select' ? TYPES[tool] : null;
+  snapMark = hT ? snapPoint(p, null, hT.geom === 'line' && hT.render !== 'zebra' ? hT.w : 0) : null;
+  if (before || snapMark) draw();
+});
+
+cv.addEventListener('pointerup', e=>{
+  if (pan){ pan = null; return; }
+  if (drag){
+    if (drag.before && drag.before !== snapshot()){
+      undoStack.push(drag.before); redoStack.length = 0; syncHistoryButtons();
+    }
+    drag = null; snapMark = null; save(); draw(); return;
+  }
+  if (draft && TYPES[draft.t].geom === 'circle' && draft.r*ppm*view.k > 8){
+    pushHistory(); elements.push(draft); draft = null; draw();
+  }
+});
+
+cv.addEventListener('dblclick', ()=>{ if (ext) endExtend(); else if (draft) commitDraft(); });
+cv.addEventListener('contextmenu', e=>{ e.preventDefault(); if (ext) endExtend(); else if (draft) commitDraft(); });
+
+cv.addEventListener('wheel', e=>{
+  e.preventDefault();
+  const s = localPt(e);
+  const before = toWorld(s);
+  const f = Math.exp(-e.deltaY * 0.0016);
+  view.k = Math.max(0.02, Math.min(60, view.k * f));
+  const after = toWorld(s);
+  view.x += (after.x-before.x)*view.k;
+  view.y += (after.y-before.y)*view.k;
+  draw();
+}, {passive:false});
+
+/* ============================================================
+   Tastatur
+   ============================================================ */
+window.addEventListener('keydown', e=>{
+  if (e.key === 'Shift') shiftDown = true;
+  if (e.key === 'Alt') altDown = true;
+  const inField = /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName);
+  if (e.code === 'Space' && !inField){ spaceDown = true; cv.style.cursor = 'grab'; e.preventDefault(); }
+  if (inField) return;
+
+  const mod = e.ctrlKey || e.metaKey;
+  if (mod && e.key.toLowerCase() === 'z'){ e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
+  if (mod && e.key.toLowerCase() === 'y'){ e.preventDefault(); redo(); return; }
+  if (e.key === 'Enter'){ ext ? endExtend() : commitDraft(); return; }
+  if (e.key === 'Escape'){
+    if (ext){ endExtend(); }
+    else if (draft){ draft = null; draw(); updateHint(); }
+    else if (mode === 'scale'){ endScaleMode(); }
+    else { sel = null; setTool('select'); }
+    return;
+  }
+  if (e.key === 'Delete' || e.key === 'Backspace'){ deleteSelection(); return; }
+  if (e.key.toLowerCase() === 'v'){ setTool('select'); return; }
+  if (e.key.toLowerCase() === 'h'){ toggleCompare(); return; }
+});
+window.addEventListener('keyup', e=>{
+  if (e.key === 'Shift') shiftDown = false;
+  if (e.key === 'Alt'){ altDown = false; snapMark = null; draw(); }
+  if (e.code === 'Space'){ spaceDown = false; cv.style.cursor = tool==='select' ? 'default' : 'crosshair'; }
+});
+
+/* ============================================================
+   Inspektor
+   ============================================================ */
+const ins = {
+  box: document.getElementById('inspector'),
+  name: document.getElementById('insName'),
+  sub: document.getElementById('insSub'),
+  fw: document.getElementById('fieldW'), w: document.getElementById('insW'), wr: document.getElementById('insWR'),
+  lw: document.getElementById('labW'),
+  fr: document.getElementById('fieldR'), r: document.getElementById('insR'), rr: document.getElementById('insRR'),
+  fc: document.getElementById('fieldCurve'), seg: document.getElementById('segCurve'),
+  rowCR: document.getElementById('rowCR'), cr: document.getElementById('insCR'), crr: document.getElementById('insCRR'),
+  ft: document.getElementById('fieldType'), type: document.getElementById('insType'),
+  fm: document.getElementById('fieldMark'),
+  mk: {l:document.getElementById('markL'), mid:document.getElementById('markM'), r:document.getElementById('markR')},
+  fp: document.getElementById('fieldPar'), segPar: document.getElementById('segPar'),
+  rowLink: document.getElementById('rowLink'), linkInfo: document.getElementById('linkInfo'),
+  note: document.getElementById('insNote'),
+};
+
+function noteFor(el){
+  const T = TYPES[el.t];
+  if (T.geom === 'circle'){
+    const d = (el.r ?? T.r)*2, insel = Math.max(0, d - 2*(el.w ?? T.w));
+    let t, warn = false;
+    if (d < 13){ t = 'sehr klein – unter dem üblichen Mindestmaß von 13 m'; warn = true; }
+    else if (d <= 22) t = 'Mini-Kreisverkehr (13–22 m)';
+    else if (d < 26){ t = 'Zwischengröße 22–26 m gilt als ungünstig'; warn = true; }
+    else if (d <= 40) t = 'kleiner Kreisverkehr (26–40 m)';
+    else { t = 'über 40 m – nur als Sonderentwurf'; warn = true; }
+    return {html:'Außen <span class="val">ø '+fmt1(d)+' m</span> · Insel <span class="val">ø '+fmt1(insel)+' m</span><br>'+t, warn};
+  }
+  if (T.geom !== 'line' && T.geom !== 'area') return null;
+  if (T.render === 'zebra') return {html:'Gerade Querung.', warn:false};
+  if (el.pts.length < 3) return {html:'Gerade – noch keine Kurve.', warn:false};
+  if (curveMode(el) === 'bogen' && curveR(el) <= 0)
+    return {html:'Spitze Ecken – für befahrene Flächen einen Radius setzen.', warn:false};
+  const info = curveInfo(el);
+  if (info.min === Infinity) return {html:'Gerade Führung.', warn:false};
+  const base = 'Kleinster Radius <span class="val">'+fmt1(info.min)+' m</span>';
+  if (info.rmin && info.min < info.rmin - 1e-6)
+    return {html:base+' – Richtwert ≥ <span class="val">'+fmt1(info.rmin)+' m</span>', warn:true};
+  if (info.rmin) return {html:base+' · Richtwert ≥ <span class="val">'+fmt1(info.rmin)+' m</span>', warn:false};
+  return {html:base, warn:false};
+}
+let beforeEdit = null;
+
+function syncInspector(){
+  const el = elements.find(e=>e.id===sel);
+  if (!el){ ins.box.classList.remove('show'); return; }
+  const T = TYPES[el.t];
+  ins.box.classList.add('show');
+  ins.name.textContent = T.n;
+  ins.sub.textContent = T.geom==='line' ? el.pts.length+' Punkte'
+    : T.geom==='area' ? 'Fläche, '+el.pts.length+' Ecken'
+    : T.geom==='circle' ? 'Kreisverkehr' : 'Einzelobjekt';
+  const showW = T.geom === 'line' || T.geom === 'circle';
+  ins.fw.hidden = !showW;
+  if (showW){
+    ins.lw.textContent = T.geom === 'circle' ? 'Fahrbahnbreite' : 'Breite';
+    ins.w.value = (el.w ?? T.w).toFixed(2);
+    ins.wr.value = el.w ?? T.w;
+  }
+  const showR = T.geom === 'circle' || T.geom === 'point';
+  ins.fr.hidden = !showR;
+  if (showR){
+    ins.fr.querySelector('label').textContent = T.geom === 'circle' ? 'Außenradius' : 'Kronenradius';
+    ins.r.value = (el.r ?? T.r).toFixed(1);
+    ins.rr.value = el.r ?? T.r;
+  }
+  const isPath = (T.geom === 'line' || T.geom === 'area') && T.r0 !== undefined;
+  ins.fc.hidden = !isPath || el.pts.length < 3;
+  if (!ins.fc.hidden){
+    const m = curveMode(el);
+    ins.seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.cv === m));
+    ins.rowCR.hidden = m !== 'bogen';
+    ins.cr.value = curveR(el).toFixed(1);
+    ins.crr.value = curveR(el);
+  }
+  const swappable = Object.entries(TYPES).filter(([id,t]) => t.geom === T.geom && !!t.render === !!T.render);
+  ins.ft.hidden = swappable.length < 2;
+  if (!ins.ft.hidden){
+    ins.type.innerHTML = swappable.map(([id,t]) =>
+      '<option value="'+id+'"'+(id===el.t?' selected':'')+'>'+t.n+(t.geom==='line'?' · '+fmt(t.w)+' m':'')+'</option>').join('');
+  }
+  ins.fm.hidden = !(T.geom === 'line' && T.render !== 'zebra');
+  if (!ins.fm.hidden){
+    const n = segCount(el);
+    selSeg = Math.max(0, Math.min(selSeg, n-1));
+    ins.fm.querySelector('label').textContent =
+      n > 1 ? 'Markierung · Abschnitt '+(selSeg+1)+'/'+n : 'Markierung';
+    const opts = Object.entries(MARKS).map(([k,m]) => [k, m.n]);
+    for (const side of ['l','mid','r']){
+      const cur = markOf(el, side, selSeg);
+      ins.mk[side].innerHTML = opts.map(([k,m2]) =>
+        '<option value="'+k+'"'+(k===cur?' selected':'')+'>'+m2+'</option>').join('');
+    }
+    document.getElementById('btnUncut').hidden = !(el.cuts && el.cuts.length);
+  }
+  ins.fp.hidden = !(T.geom === 'line' && T.render !== 'zebra' && el.pts.length >= 2);
+  ins.rowLink.hidden = !el.par;
+  if (el.par){
+    const par = elements.find(x => x.id === el.par.id);
+    ins.linkInfo.innerHTML = par ? 'bündig gekoppelt an <b>'+TYPES[par.t].n+'</b>' : '';
+  }
+  const note = noteFor(el);
+  ins.note.innerHTML = note ? note.html : '';
+  ins.note.className = 'note' + (note && note.warn ? ' warn' : '');
+  ins.note.hidden = !note;
+}
+function editValue(field, v){
+  const el = elements.find(e=>e.id===sel); if (!el || !isFinite(v)) return;
+  el[field] = field === 'cr' ? Math.max(0, v) : Math.max(0.2, v);
+  syncInspector(); draw();
+}
+function armEdit(){ beforeEdit = snapshot(); }
+function commitEdit(){
+  if (beforeEdit === null) return;
+  if (beforeEdit !== snapshot()){ undoStack.push(beforeEdit); redoStack.length = 0; syncHistoryButtons(); save(); }
+  beforeEdit = null;
+}
+function setMark(el, side, val, seg){
+  const key = side === 'l' ? 'ml' : side === 'r' ? 'mr' : 'mid';
+  if (el.cuts && el.cuts.length){ ensureMk(el); el.mk[seg || 0][key] = val; }
+  else el[key] = val;
+  if (side === 'mid') return;
+  const facing = (other, sd) => {
+    if (other.cuts && other.cuts.length){ ensureMk(other); other.mk[Math.min(seg||0, other.mk.length-1)][sd] = val; }
+    else other[sd] = val;
+  };
+  for (const c of elements){
+    if (!c.par || c.par.id !== el.id) continue;
+    if (c.par.side > 0 && side === 'l') facing(c, 'mr');
+    if (c.par.side < 0 && side === 'r') facing(c, 'ml');
+  }
+  if (el.par){
+    const par = elements.find(x => x.id === el.par.id);
+    if (par){
+      if (el.par.side > 0 && side === 'r') facing(par, 'ml');
+      if (el.par.side < 0 && side === 'l') facing(par, 'mr');
+    }
+  }
+}
+for (const side of ['l','mid','r']){
+  ins.mk[side].addEventListener('change', e=>{
+    const el = elements.find(x=>x.id===sel); if (!el) return;
+    pushHistory(); setMark(el, side, e.target.value, selSeg);
+    syncInspector(); draw();
+  });
+}
+ins.type.addEventListener('change', e=>{
+  const el = elements.find(x=>x.id===sel); if (!el) return;
+  const nt = TYPES[e.target.value]; if (!nt) return;
+  pushHistory();
+  el.t = e.target.value;
+  delete el.ml; delete el.mr; delete el.mid;
+  if (nt.geom === 'line' || nt.geom === 'circle') el.w = nt.w;
+  if (nt.r0 !== undefined && el.cr === undefined) el.cr = nt.r0;
+  syncInspector(); draw();
+});
+document.getElementById('btnUncut').addEventListener('click', ()=>{
+  const el = elements.find(x=>x.id===sel); if (!el || !el.cuts) return;
+  pushHistory(); delete el.cuts; delete el.mk; selSeg = 0;
+  syncInspector(); draw();
+});
+document.getElementById('btnUnlink').addEventListener('click', ()=>{
+  const el = elements.find(x=>x.id===sel); if (!el || !el.par) return;
+  pushHistory(); unlink(el); syncInspector(); draw();
+});
+ins.segPar.addEventListener('click', e=>{
+  const b = e.target.closest('button'); if (!b) return;
+  const el = elements.find(x=>x.id===sel); if (!el) return;
+  const T = TYPES[el.t];
+  if (T.geom !== 'line') return;
+  pushHistory();
+  const side = b.dataset.side === 'l' ? 1 : -1;
+  const copy = JSON.parse(JSON.stringify(el));
+  copy.id = uid++;
+  copy.par = {id:el.id, side};
+  copy.pts = offsetPoly(el.pts, side*(el.w ?? T.w)*ppm, false);
+  if (T.kfz){
+    if (side > 0){ setMark(el, 'l', 'leit', selSeg); copy.mr = 'leit'; }
+    else { setMark(el, 'r', 'leit', selSeg); copy.ml = 'leit'; }
+    if (el.cuts) delete copy.mk;
+  }
+  elements.push(copy);
+  sel = copy.id; syncInspector(); draw();
+});
+ins.seg.addEventListener('click', e=>{
+  const b = e.target.closest('button'); if (!b) return;
+  const el = elements.find(x=>x.id===sel); if (!el) return;
+  pushHistory(); el.cv = b.dataset.cv;
+  syncInspector(); draw();
+});
+for (const [inp, field] of [[ins.w,'w'],[ins.wr,'w'],[ins.r,'r'],[ins.rr,'r'],[ins.cr,'cr'],[ins.crr,'cr']]){
+  inp.addEventListener('pointerdown', armEdit);
+  inp.addEventListener('focus', armEdit);
+  inp.addEventListener('input', ()=>editValue(field, parseFloat(inp.value)));
+  inp.addEventListener('change', commitEdit);
+  inp.addEventListener('blur', commitEdit);
+}
+function deleteSelection(){
+  const i = elements.findIndex(e=>e.id===sel); if (i < 0) return;
+  pushHistory(); elements.splice(i,1); sel = null; syncInspector(); draw();
+}
+document.getElementById('insDel').addEventListener('click', deleteSelection);
+document.getElementById('insDup').addEventListener('click', ()=>{
+  const el = elements.find(e=>e.id===sel); if (!el) return;
+  pushHistory();
+  const off = 3*ppm;
+  const copy = JSON.parse(JSON.stringify(el));
+  copy.id = uid++; delete copy.par;
+  copy.pts = copy.pts.map(p=>({x:p.x+off, y:p.y+off}));
+  elements.push(copy); sel = copy.id; syncInspector(); draw();
+});
+
+/* ============================================================
+   Maßstab
+   ============================================================ */
+const ovScale = document.getElementById('ovScale');
+function startScaleMode(){
+  mode = 'scale'; tool = 'select'; draft = null; sel = null; scalePts = [];
+  document.querySelectorAll('.tool').forEach(b=>b.classList.remove('on'));
+  document.getElementById('btnScale').classList.add('on');
+  cv.style.cursor = 'crosshair';
+  syncInspector(); updateHint(); draw();
+}
+function endScaleMode(){
+  mode = 'draw'; scalePts = [];
+  document.getElementById('btnScale').classList.remove('on');
+  setTool('select');
+}
+function openScaleDialog(){
+  ovScale.classList.add('show');
+  const inp = document.getElementById('scaleMeters');
+  inp.focus(); inp.select();
+}
+document.getElementById('btnScale').addEventListener('click', ()=>{
+  mode === 'scale' ? endScaleMode() : startScaleMode();
+});
+document.getElementById('scaleApply').addEventListener('click', applyScale);
+document.getElementById('scaleMeters').addEventListener('keydown', e=>{ if (e.key === 'Enter') applyScale(); });
+document.getElementById('scaleCancel').addEventListener('click', ()=>{
+  ovScale.classList.remove('show'); scalePts = []; draw();
+});
+function applyScale(){
+  const m = parseFloat(document.getElementById('scaleMeters').value);
+  const px = dist(scalePts[0], scalePts[1]);
+  if (isFinite(m) && m > 0 && px > 1){
+    ppm = px/m; calibrated = true; syncScaleState(); save();
+  }
+  ovScale.classList.remove('show');
+  endScaleMode();
+}
+function syncScaleState(){
+  const el = document.getElementById('scaleState');
+  if (calibrated){
+    el.className = 'pill mono';
+    el.textContent = '1 m = ' + ppm.toLocaleString('de-DE',{maximumFractionDigits:2}) + ' px';
+  } else {
+    el.className = 'pill warn';
+    el.textContent = 'nicht kalibriert';
+  }
+}
+
+/* ============================================================
+   Ansicht & Aktionen
+   ============================================================ */
+document.getElementById('imgOpacity').addEventListener('input', e=>{
+  imgOpacity = e.target.value/100; draw();
+});
+document.getElementById('btnCheck').addEventListener('click', e=>{
+  checkRadii = !checkRadii; e.currentTarget.classList.toggle('on', checkRadii); draw();
+});
+document.getElementById('btnGrid').addEventListener('click', e=>{
+  showGrid = !showGrid; e.currentTarget.classList.toggle('on', showGrid); draw();
+});
+function toggleCompare(){
+  hideDesign = !hideDesign;
+  const b = document.getElementById('btnCompare');
+  b.classList.toggle('on', hideDesign);
+  b.textContent = hideDesign ? 'Nachher' : 'Vorher';
+  draw();
+}
+document.getElementById('btnCompare').addEventListener('click', toggleCompare);
+document.getElementById('btnUndo').addEventListener('click', undo);
+document.getElementById('btnRedo').addEventListener('click', redo);
+
+const ovClear = document.getElementById('ovClear');
+document.getElementById('btnClear').addEventListener('click', ()=>ovClear.classList.add('show'));
+document.getElementById('clearNo').addEventListener('click', ()=>ovClear.classList.remove('show'));
+document.getElementById('clearYes').addEventListener('click', ()=>{
+  pushHistory(); elements = []; sel = null; draft = null;
+  ovClear.classList.remove('show'); syncInspector(); draw();
+});
+
+/* ============================================================
+   Export
+   ============================================================ */
+const ovExport = document.getElementById('ovExport');
+document.getElementById('exportClose').addEventListener('click', ()=>ovExport.classList.remove('show'));
+document.getElementById('btnExport').addEventListener('click', exportImage);
+
+function bounds(){
+  if (img) return {x0:0, y0:0, x1:img.width, y1:img.height};
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  for (const el of elements) for (const p of el.pts){
+    x0=Math.min(x0,p.x); y0=Math.min(y0,p.y); x1=Math.max(x1,p.x); y1=Math.max(y1,p.y);
+  }
+  if (x1 < x0) return {x0:0, y0:0, x1:800, y1:600};
+  const pad = 10*ppm;
+  return {x0:x0-pad, y0:y0-pad, x1:x1+pad, y1:y1+pad};
+}
+let exportBlob = null;
+function exportImage(){
+  const b = bounds();
+  const w = Math.max(1, b.x1-b.x0), h = Math.max(1, b.y1-b.y0);
+  const sc = Math.min(1, 4000/Math.max(w,h));
+  const c = document.createElement('canvas');
+  c.width = Math.round(w*sc); c.height = Math.round(h*sc);
+  const g = c.getContext('2d');
+  g.fillStyle = img ? '#1a1d1f' : '#dedbd4';
+  g.fillRect(0,0,c.width,c.height);
+  g.setTransform(sc,0,0,sc,-b.x0*sc,-b.y0*sc);
+  const keep = hideDesign; hideDesign = false;
+  renderScale = sc;
+  renderScene(g);
+  renderScale = view.k;
+  hideDesign = keep;
+  document.getElementById('exportImg').src = c.toDataURL('image/png');
+  document.getElementById('exportNote').hidden = true;
+  ovExport.classList.add('show');
+  c.toBlob(bl=>{ exportBlob = bl; }, 'image/png');
+}
+document.getElementById('exportCopy').addEventListener('click', async ()=>{
+  const note = document.getElementById('exportNote');
+  note.hidden = false;
+  try{
+    await navigator.clipboard.write([new ClipboardItem({'image/png': exportBlob})]);
+    note.textContent = 'Kopiert.';
+  }catch(err){
+    note.textContent = 'Kopieren nicht möglich – Rechtsklick auf das Bild nutzen.';
+  }
+});
+
+/* ============================================================
+   Hinweiszeile
+   ============================================================ */
+function updateHint(){
+  const h = document.getElementById('hint');
+  if (mode === 'scale'){
+    h.innerHTML = '<b>Maßstab:</b> zwei Punkte mit bekanntem Abstand anklicken – danach die Länge in Metern eintragen.';
+    return;
+  }
+  if (ext){
+    h.innerHTML = '<b>Verlängern:</b> weitere Punkte klicken, <kbd>Enter</kbd> beendet. '
+      + 'Gekoppelte Nachbarspuren wachsen mit.';
+    return;
+  }
+  if (tool === 'select'){
+    h.innerHTML = '<b>Auswählen:</b> Element anklicken, Punkte an den Griffen ziehen. '
+      + 'Das <b>+</b> zwischen zwei Punkten setzt einen Wegpunkt, das <b>+</b> am Ende verlängert. '
+      + '<kbd>Entf</kbd> löscht, <kbd>Leertaste</kbd> + Ziehen verschiebt die Karte.';
+    return;
+  }
+  if (tool === 'cut'){
+    h.innerHTML = '<b>Trennen:</b> auf eine Spur klicken, um dort einen Markierungsabschnitt zu beginnen. '
+      + 'Die Linienführung bleibt durchgehend. Klick auf eine Trennstelle hebt sie auf.';
+    return;
+  }
+  const T = TYPES[tool];
+  if (T.geom === 'point'){ h.innerHTML = '<b>'+T.n+':</b> klicken zum Setzen.'; return; }
+  if (T.geom === 'circle'){ h.innerHTML = '<b>'+T.n+':</b> Mitte klicken, Radius aufziehen, erneut klicken.'; return; }
+  if (T.maxPts === 2){ h.innerHTML = '<b>'+T.n+':</b> von Bordstein zu Bordstein klicken – zwei Punkte.'; return; }
+  h.innerHTML = '<b>'+T.n+' · '+fmt(T.w)+' m:</b> klicken für jeden Punkt, '
+    + '<kbd>Doppelklick</kbd> oder <kbd>Enter</kbd> beendet. <kbd>Umschalt</kbd> rastet Winkel ein.'
+    + (T.geom === 'line' ? ' Nahe an einer Spur rastet der Punkt bündig ein, <kbd>Alt</kbd> hebt das auf.' : '');
+}
+
+/* ============================================================
+   Start
+   ============================================================ */
+restore();
+setTool('select');
+syncScaleState();
+syncHistoryButtons();
+resize();
+</script>
+</body>
+</html>
