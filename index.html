@@ -1687,6 +1687,30 @@ function sideNeighbours(el, side){
   return [...seen.values()];
 }
 
+// Vorschau: Pfeil oder Haltlinie an der Spur unter dem Zeiger
+function hostFor(p, T){
+  const hit = hitElement(p);
+  const HT = hit && TYPES[hit.t];
+  const ok = hit && HT.geom === 'line' && HT.render !== 'zebra' && !HT.ticks &&
+             (T.geom === 'arrow' ? !!HT.kfz : HT.rank <= 2);
+  return ok ? hit : null;
+}
+
+function makeGhost(p){
+  const T = TYPES[tool];
+  if (!T || (T.geom !== 'arrow' && T.geom !== 'bar')) return null;
+  const host = hostFor(p, T);
+  if (!host) return null;
+  const S = shape(host).pts;
+  if (S.length < 2) return null;
+  const u = paramAt(S, p);
+  const at = pointAt(S, u);
+  const g = {id:-1, t:tool, on:host.id, u, pts:[at.p],
+             a:Math.atan2(at.u.y, at.u.x), hw:host.w ?? TYPES[host.t].w};
+  if (T.geom === 'arrow'){ g.kind = lastArrow; g.len = 5; } else g.kind = lastBar;
+  return g;
+}
+
 // Pfeile sitzen auf einer Fahrspur und folgen ihr
 function solveArrows(){
   for (const el of elements){
