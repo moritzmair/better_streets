@@ -180,17 +180,22 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 .seg button + button{border-left:1px solid var(--line)}
 .seg button.on{background:var(--accent-bg);color:var(--accent-ink);font-weight:600}
 .field select{background:var(--raised);border:1px solid var(--line);border-radius:5px;padding:5px 7px;width:100%}
+.xlist{display:flex;flex-direction:column;gap:5px}
+.xrow{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center}
+.xrow b{font-size:11.5px;font-weight:500;color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.xrow b:hover{color:var(--ink)}
+.xrow select{background:var(--raised);border:1px solid var(--line);border-radius:5px;padding:3px 5px;font-size:11.5px}
 .mrow{display:grid;grid-template-columns:42px 1fr;gap:6px;align-items:center}
 .mrow span{font-size:11px;color:var(--ink3)}
 .mrow select{background:var(--raised);border:1px solid var(--line);border-radius:5px;padding:4px 6px;font-size:12px;width:100%}
-.linkinfo{flex:1 1 auto;font-size:11.5px;color:var(--ink2)}
-.linkinfo b{color:var(--ink);font-weight:600}
-#rowLink .btn{padding:4px 8px;font-size:12px}
 .chk{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink2);cursor:pointer}
 .chk[hidden]{display:none}
 .chk input{accent-color:var(--accent-bg)}
 #btnUncut{margin-top:2px;padding:4px 8px;font-size:12px;justify-content:center}
 #btnUncut[hidden]{display:none}
+#btnDelPt{margin-bottom:9px;padding:5px 8px;font-size:12.5px;justify-content:center}
+#btnDelPt[hidden]{display:none}
+#btnDelPt:hover{border-color:var(--danger);color:var(--danger)}
 .note{font-size:11.5px;line-height:1.4;color:var(--ink2);margin:-2px 0 10px}
 .note .val{font-family:"IBM Plex Mono",monospace}
 .note.warn{color:var(--warn)}
@@ -371,17 +376,18 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
           <button class="btn" id="btnUncut" hidden>Trennstellen aufheben</button>
         </div>
         <div class="field" id="fieldPar" hidden>
-          <label>Nachbarspur bündig anlegen</label>
+          <label>Spur daneben anlegen</label>
           <div class="seg" id="segPar">
             <button type="button" data-side="l">◀ links</button>
             <button type="button" data-side="r">rechts ▶</button>
           </div>
-          <div class="row" id="rowLink" hidden>
-            <span class="linkinfo" id="linkInfo"></span>
-            <button class="btn" id="btnUnlink">lösen</button>
-          </div>
+        </div>
+        <div class="field" id="fieldX" hidden>
+          <label>Kreuzungen</label>
+          <div class="xlist" id="xList"></div>
         </div>
         <div class="note" id="insNote"></div>
+        <button class="btn" id="btnDelPt" hidden>Punkt löschen</button>
         <div class="actions">
           <button class="btn" id="insDup">Duplizieren</button>
           <button class="btn danger" id="insDel">Löschen</button>
@@ -548,10 +554,11 @@ let draft = null;
 let sel = null;
 let showGrid = false, hideDesign = false, checkRadii = true;
 let renderScale = 1;   // Welt→Bildschirm, für pixelgenaue Überlappung
-let crossMap = {}, maskMap = {};   // Querungen und Kreisverkehrs-Masken je Element
+let crossMap = {};                 // Querungsintervalle je Element
+let clipCross = {}, clipMask = {}, clipDash = {};  // beschneidende Flächen je Element
 let scalePts = [];
 let snapMark = null, cursor = null;
-let selSeg = 0, ext = null, badgeHits = [];
+let selSeg = 0, ext = null, badgeHits = [], ghost = null, pen = null, activePt = null;
 let undoStack = [], redoStack = [];
 let spaceDown = false, shiftDown = false, altDown = false;
 let pan = null, drag = null;
@@ -615,6 +622,7 @@ function setTool(t){
   document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('on', b.dataset.tool===t));
   document.getElementById('btnScale').classList.remove('on');
   if (ext) endExtend();
+  ghost = null; pen = null;
   cv.style.cursor = t==='select' ? 'default' : 'crosshair';
   syncInspector(); updateHint(); draw();
 }
@@ -687,27 +695,58 @@ function filletGeom(raw, r, closed){
   return {pts:out, corners};
 }
 
-// Zentripetaler Catmull-Rom-Spline durch alle Punkte
-function splineGeom(raw, closed){
+// Kurve durch alle Punkte: kubische Bézier je Abschnitt.
+// Ohne eigene Tangente wird sie aus den Nachbarpunkten abgeleitet (weiche Durchfahrt),
+// mit eigener Tangente bestimmt der Nutzer Richtung und Stärke der Kurve.
+function autoTangent(raw, i, closed){
   const n = raw.length;
-  if (n < 3) return {pts:raw.slice(), corners:[]};
-  const get = i => closed ? raw[((i%n)+n)%n] : raw[Math.max(0, Math.min(n-1, i))];
-  const knot = (t,a,b) => t + Math.pow(Math.max(Math.hypot(b.x-a.x, b.y-a.y), 1e-4), 0.5);
-  const mix = (a,b,ta,tb,t) => {
-    const f = (tb-t)/(tb-ta), g2 = (t-ta)/(tb-ta);
-    return {x:a.x*f + b.x*g2, y:a.y*f + b.y*g2};
-  };
+  const get = k => closed ? raw[((k%n)+n)%n] : raw[Math.max(0, Math.min(n-1, k))];
+  const a = get(i-1), b = get(i), c = get(i+1);
+  let dx = c.x-a.x, dy = c.y-a.y;
+  if (!closed && i === 0){ dx = c.x-b.x; dy = c.y-b.y; }
+  if (!closed && i === n-1){ dx = b.x-a.x; dy = b.y-a.y; }
+  const l = Math.hypot(dx,dy);
+  return l < 1e-6 ? {x:0,y:0} : {x:dx/l, y:dy/l};   // Einheitsrichtung
+}
+
+// Tangente an Punkt i als Hebelvektor (Weltpixel)
+function tangentAt(el, i, closed){
+  const raw = el.pts;
+  if (el.tg && el.tg[i]) return el.tg[i];
+  const u = autoTangent(raw, i, closed);
+  const n = raw.length;
+  const nx = closed ? raw[(i+1)%n] : raw[Math.min(i+1, n-1)];
+  const pv = closed ? raw[((i-1)%n+n)%n] : raw[Math.max(i-1, 0)];
+  const l = Math.min(dist(raw[i], nx) || 1e9, dist(raw[i], pv) || 1e9);
+  const k = (isFinite(l) ? l : 0) / 3;
+  return {x:u.x*k, y:u.y*k};
+}
+
+function splineGeom(raw, closed, el){
+  const n = raw.length;
+  if (n < 2) return {pts:raw.slice(), corners:[]};
+  const src = el || {pts:raw};
   const out = [];
   const segs = closed ? n : n-1;
   for (let i = 0; i < segs; i++){
-    const p0 = get(i-1), p1 = get(i), p2 = get(i+1), p3 = get(i+2);
-    const t0 = 0, t1 = knot(t0,p0,p1), t2 = knot(t1,p1,p2), t3 = knot(t2,p2,p3);
-    const steps = Math.max(6, Math.min(40, Math.round(Math.hypot(p2.x-p1.x, p2.y-p1.y)/(0.5*ppm))));
+    const p1 = raw[i], p2 = raw[(i+1)%n];
+    const t1 = tangentAt(src, i, closed), t2 = tangentAt(src, (i+1)%n, closed);
+    const len = dist(p1, p2);
+    // Hebel auf die Segmentlänge begrenzen: verhindert Schleifen bei kurzen Abschnitten
+    const cap = v => {
+      const l = Math.hypot(v.x, v.y), max = len*0.95;
+      return (l > max && l > 1e-6) ? {x:v.x/l*max, y:v.y/l*max} : v;
+    };
+    const a1 = cap(t1), a2 = cap(t2);
+    const c1 = {x:p1.x + a1.x, y:p1.y + a1.y};
+    const c2 = {x:p2.x - a2.x, y:p2.y - a2.y};
+    const steps = Math.max(6, Math.min(48, Math.round(len/(0.4*ppm))));
     for (let k = 0; k < steps; k++){
-      const t = t1 + (t2-t1)*k/steps;
-      const A1 = mix(p0,p1,t0,t1,t), A2 = mix(p1,p2,t1,t2,t), A3 = mix(p2,p3,t2,t3,t);
-      const B1 = mix(A1,A2,t0,t2,t), B2 = mix(A2,A3,t1,t3,t);
-      out.push(mix(B1,B2,t1,t2,t));
+      const t = k/steps, m = 1-t;
+      out.push({
+        x: m*m*m*p1.x + 3*m*m*t*c1.x + 3*m*t*t*c2.x + t*t*t*p2.x,
+        y: m*m*m*p1.y + 3*m*m*t*c1.y + 3*m*t*t*c2.y + t*t*t*p2.y,
+      });
     }
   }
   out.push(closed ? raw[0] : raw[n-1]);
@@ -738,6 +777,75 @@ function bboxOf(P, pad){
     x0=Math.min(x0,p.x); y0=Math.min(y0,p.y); x1=Math.max(x1,p.x); y1=Math.max(y1,p.y);
   }
   return {x0:x0-pad, y0:y0-pad, x1:x1+pad, y1:y1+pad};
+}
+
+// Geschlossenes Polygon eines Bandes: linke Kante hin, rechte zurück
+function bandPoly(o){
+  const T = TYPES[o.t];
+  const S = shape(o).pts;
+  if (S.length < 2) return null;
+  const h = (o.w ?? T.w)*ppm/2;
+  const a = offsetPoly(S, h, false), b = offsetPoly(S, -h, false);
+  b.reverse();
+  return a.concat(b);
+}
+
+// Überlappen sich zwei Wege? minSin>0 verlangt zusätzlich einen Kreuzungswinkel
+function overlaps(el, o, minSin){
+  const S = shape(el).pts, O = shape(o).pts;
+  if (S.length < 2 || O.length < 2) return false;
+  const h = (o.w ?? TYPES[o.t].w)*ppm/2;
+  const bb = bboxOf(O, h);
+  const R = resample(S, Math.max(0.4*ppm, 3));
+  for (let i = 0; i < R.pts.length; i++){
+    const p = R.pts[i];
+    if (p.x < bb.x0 || p.x > bb.x1 || p.y < bb.y0 || p.y > bb.y1) continue;
+    const a = R.pts[Math.max(i-1, 0)], b = R.pts[Math.min(i+1, R.pts.length-1)];
+    const ul = Math.hypot(b.x-a.x, b.y-a.y) || 1;
+    const ux = (b.x-a.x)/ul, uy = (b.y-a.y)/ul;
+    for (let j = 0; j < O.length-1; j++){
+      if (distToSeg(p, O[j], O[j+1]) > h) continue;
+      if (!minSin) return true;
+      const vl = Math.hypot(O[j+1].x-O[j].x, O[j+1].y-O[j].y) || 1;
+      const vx = (O[j+1].x-O[j].x)/vl, vy = (O[j+1].y-O[j].y)/vl;
+      if (Math.abs(ux*vy - uy*vx) > minSin) return true;
+    }
+  }
+  return false;
+}
+
+// Zeichnen außerhalb bzw. innerhalb fremder Flächen
+function blockPath(g, b){
+  if (b.poly) addPoly(g, b.poly, true);
+  else { g.moveTo(b.c.x + b.r, b.c.y); g.arc(b.c.x, b.c.y, b.r, 0, Math.PI*2); }
+}
+function withClipOutside(g, blockers, fn){
+  if (!blockers || !blockers.length) return fn();
+  g.save();
+  for (const b of blockers){
+    g.beginPath();
+    g.rect(-1e7, -1e7, 2e7, 2e7);
+    blockPath(g, b);
+    g.clip('evenodd');
+  }
+  fn();
+  g.restore();
+}
+function withClipInside(g, b, fn){
+  g.save();
+  g.beginPath();
+  blockPath(g, b);
+  g.clip();
+  fn();
+  g.restore();
+}
+
+// Teilstück eines Weges zwischen zwei normierten Positionen
+function subPath(P, a, b){
+  const secs = splitPath(P, [a, b]);
+  if (secs.length === 3) return secs[1];
+  if (secs.length === 2) return a <= 0.001 ? secs[0] : secs[1];
+  return P;
 }
 
 // Intervalle zusammenfassen, die nur durch eine Naht getrennt sind
@@ -795,72 +903,73 @@ function intervals(flags, R, S){
   return out.length ? out : null;
 }
 
-// Abschnitte, in denen Markierungen aufhören: Kreisverkehr und Kreuzungsfläche
-function maskFor(el){
+// Gleichrangige Wege, die diesen kreuzen
+function crossPartners(el){
   const T = TYPES[el.t];
-  if (T.geom !== 'line' || T.render === 'zebra') return null;
-  const rings = elements.filter(o => TYPES[o.t].geom === 'circle');
-  const peers = T.rank ? elements.filter(o => o !== el && TYPES[o.t].geom === 'line'
-    && TYPES[o.t].rank === T.rank && TYPES[o.t].render !== 'zebra') : [];
-  if (!rings.length && !peers.length) return null;
-  const S = shape(el).pts;
-  if (S.length < 2) return null;
-  const R = resample(S, Math.max(0.25*ppm, 2));
-  const flags = new Array(R.pts.length).fill(false);
-  let any = false;
-  for (const o of rings){
-    const c = o.pts[0], rad = (o.r ?? TYPES[o.t].r)*ppm;
-    for (let i = 0; i < R.pts.length; i++){
-      if (flags[i]) continue;
-      if (dist(R.pts[i], c) <= rad){ flags[i] = true; any = true; }
-    }
-  }
-  // Kreuzende Anlage gleichen Rangs: ab etwa 20° Winkel gilt die Fläche als Knoten
-  for (const o of peers){
-    const O = shape(o).pts;
-    if (O.length < 2) continue;
-    const half = (o.w ?? TYPES[o.t].w)*ppm/2;
-    const bb = bboxOf(O, half);
-    for (let i = 0; i < R.pts.length; i++){
-      const p = R.pts[i];
-      if (flags[i] || p.x < bb.x0 || p.x > bb.x1 || p.y < bb.y0 || p.y > bb.y1) continue;
-      const a = R.pts[Math.max(i-1, 0)], b = R.pts[Math.min(i+1, R.pts.length-1)];
-      const ul = Math.hypot(b.x-a.x, b.y-a.y) || 1;
-      const ux = (b.x-a.x)/ul, uy = (b.y-a.y)/ul;
-      for (let j = 0; j < O.length-1; j++){
-        if (distToSeg(p, O[j], O[j+1]) > half + 0.06*ppm) continue;
-        const vl = Math.hypot(O[j+1].x-O[j].x, O[j+1].y-O[j].y) || 1;
-        const vx = (O[j+1].x-O[j].x)/vl, vy = (O[j+1].y-O[j].y)/vl;
-        if (Math.abs(ux*vy - uy*vx) > 0.34){ flags[i] = true; any = true; break; }
-      }
-    }
-  }
-  if (!any) return null;
-  return intervals(flags, R, S);
-}
-
-// Weg an Intervallgrenzen zerlegen, mit Kennzeichnung innen/außen
-function splitFlagged(P, ivals){
-  const cuts = [];
-  for (const [a,b] of ivals) cuts.push(a, b);
-  const secs = splitPath(P, cuts);
-  const total = pathParts(P).total || 1;
-  const out = []; let acc = 0;
-  for (const sc of secs){
-    const l = pathParts(sc).total;
-    const mid = (acc + l/2)/total;
-    acc += l;
-    out.push({pts:sc, inside: ivals.some(([a,b]) => mid >= a && mid <= b)});
+  if (T.geom !== 'line' || !T.rank || T.render === 'zebra') return [];
+  const out = [];
+  for (const o of elements){
+    const OT = TYPES[o.t];
+    if (o === el || OT.geom !== 'line' || OT.rank !== T.rank || OT.render === 'zebra') continue;
+    if (overlaps(el, o, 0.34)) out.push(o);
   }
   return out;
+}
+function xMode(el, o){ return (el.xs && el.xs[o.id]) || (o.xs && o.xs[el.id]) || 'frei'; }
+function setXMode(el, o, m){
+  const put = (a, b) => {
+    if (m === 'frei'){ if (a.xs){ delete a.xs[b.id]; if (!Object.keys(a.xs).length) delete a.xs; } }
+    else { a.xs = a.xs || {}; a.xs[b.id] = m; }
+  };
+  put(el, o); put(o, el);
+}
+
+// Welche fremden Flächen unterbrechen dieses Element?
+function solveBlockers(el){
+  const T = TYPES[el.t];
+  if (T.geom !== 'line' || T.render === 'zebra') return;
+
+  // Rangniedrigere Anlagen werden gequert: Furt oder Zebrastreifen
+  if (T.rank >= 2 && el.qz !== false){
+    const bl = [];
+    for (const o of elements){
+      const OT = TYPES[o.t];
+      if (o === el || OT.geom !== 'line' || !OT.rank || OT.rank >= T.rank || OT.render === 'zebra') continue;
+      if (!overlaps(el, o, 0)) continue;
+      const bp = bandPoly(o);
+      if (bp) bl.push({poly:bp});
+    }
+    if (bl.length){
+      clipCross[el.id] = bl;
+      const iv = crossingsFor(el);
+      if (iv) crossMap[el.id] = iv;
+    }
+  }
+
+  // Gleicher Rang über Eck sowie Kreisverkehre: Markierungen hören auf
+  const ml = [];
+  for (const o of elements){
+    const OT = TYPES[o.t];
+    if (OT.geom === 'circle'){
+      ml.push({c:o.pts[0], r:(o.r ?? OT.r)*ppm});
+      continue;
+    }
+    if (o === el || OT.geom !== 'line' || !OT.rank || OT.rank !== T.rank || OT.render === 'zebra') continue;
+    if (!overlaps(el, o, 0.34)) continue;
+    const bp = bandPoly(o);
+    if (!bp) continue;
+    if (xMode(el, o) === 'strich') (clipDash[el.id] = clipDash[el.id] || []).push({poly:bp});
+    else ml.push({poly:bp});
+  }
+  if (ml.length) clipMask[el.id] = ml;
 }
 
 // Gezeichnete Linie eines Elements (gesampelt)
 function shape(el){
   const T = TYPES[el.t];
-  if (T.render === 'zebra' || el.pts.length < 3) return {pts:el.pts, corners:[]};
+  if (T.render === 'zebra' || el.pts.length < 2) return {pts:el.pts, corners:[]};
   const closed = T.geom === 'area';
-  if (curveMode(el) === 'weich') return splineGeom(el.pts, closed);
+  if (curveMode(el) === 'weich') return splineGeom(el.pts, closed, el);
   return filletGeom(el.pts, curveR(el)*ppm, closed);
 }
 
@@ -927,20 +1036,164 @@ function pointAt(P, u){
 function curvePointBetween(el, i){
   const raw = el.pts, n = raw.length;
   const closed = TYPES[el.t].geom === 'area';
-  const a = raw[i], b = raw[(i+1)%n];
-  if (curveMode(el) !== 'weich' || n < 3) return {x:(a.x+b.x)/2, y:(a.y+b.y)/2};
-  const get = k => closed ? raw[((k%n)+n)%n] : raw[Math.max(0, Math.min(n-1, k))];
-  const p0 = get(i-1), p1 = get(i), p2 = get(i+1), p3 = get(i+2);
-  const knot = (t,x,y) => t + Math.pow(Math.max(Math.hypot(y.x-x.x, y.y-x.y), 1e-4), 0.5);
-  const t0 = 0, t1 = knot(t0,p0,p1), t2 = knot(t1,p1,p2), t3 = knot(t2,p2,p3);
-  const mix = (x,y,ta,tb,t) => {
-    const f = (tb-t)/(tb-ta), g = (t-ta)/(tb-ta);
-    return {x:x.x*f + y.x*g, y:x.y*f + y.y*g};
+  const p1 = raw[i], p2 = raw[(i+1)%n];
+  if (curveMode(el) !== 'weich' || n < 2) return {x:(p1.x+p2.x)/2, y:(p1.y+p2.y)/2};
+  const t1 = tangentAt(el, i, closed), t2 = tangentAt(el, (i+1)%n, closed);
+  const len = dist(p1, p2);
+  const cap = v => {
+    const l = Math.hypot(v.x, v.y), max = len*0.95;
+    return (l > max && l > 1e-6) ? {x:v.x/l*max, y:v.y/l*max} : v;
   };
-  const t = (t1+t2)/2;
-  const A1 = mix(p0,p1,t0,t1,t), A2 = mix(p1,p2,t1,t2,t), A3 = mix(p2,p3,t2,t3,t);
-  const B1 = mix(A1,A2,t0,t2,t), B2 = mix(A2,A3,t1,t3,t);
-  return mix(B1,B2,t1,t2,t);
+  const a1 = cap(t1), a2 = cap(t2);
+  const c1 = {x:p1.x + a1.x, y:p1.y + a1.y}, c2 = {x:p2.x - a2.x, y:p2.y - a2.y};
+  return {x:(p1.x + 3*c1.x + 3*c2.x + p2.x)/8, y:(p1.y + 3*c1.y + 3*c2.y + p2.y)/8};
+}
+
+// Tangenten-Array parallel zu den Stützpunkten halten
+function tgArr(el){
+  if (!el.tg) el.tg = el.pts.map(()=>null);
+  while (el.tg.length < el.pts.length) el.tg.push(null);
+  el.tg.length = el.pts.length;
+  return el.tg;
+}
+function tgInsert(el, i){ if (el.tg) el.tg.splice(i, 0, null); }
+function tgRemove(el, i){ if (el.tg) el.tg.splice(i, 1); }
+function isSmooth(el){
+  const T = TYPES[el.t];
+  return (T.geom === 'line' || T.geom === 'area') && T.render !== 'zebra'
+      && curveMode(el) === 'weich' && el.pts.length >= 2;
+}
+// Griffpositionen der Tangente an Punkt i
+function tanHandles(el, i){
+  const closed = TYPES[el.t].geom === 'area';
+  const t = tangentAt(el, i, closed), p = el.pts[i];
+  if (Math.hypot(t.x, t.y) < 1e-6) return null;
+  return [{x:p.x + t.x, y:p.y + t.y}, {x:p.x - t.x, y:p.y - t.y}];
+}
+
+// Punkte anderer Wege, die quer daneben auf gleicher Höhe liegen
+function crossGroup(el, i){
+  const T = TYPES[el.t];
+  if (T.geom !== 'line' || T.render === 'zebra') return null;
+  const P = el.pts[i];
+  const closed = false;
+  const u = autoTangent(el.pts, i, closed);
+  if (!u.x && !u.y) return null;
+  const lonTol = 1.6*ppm, latMax = 14*ppm;
+  const out = [{el, i}];
+  for (const o of elements){
+    const OT = TYPES[o.t];
+    if (o === el || OT.geom !== 'line' || OT.render === 'zebra') continue;
+    let best = -1, bd = latMax;
+    for (let j = 0; j < o.pts.length; j++){
+      const d = {x:o.pts[j].x - P.x, y:o.pts[j].y - P.y};
+      const lon = Math.abs(d.x*u.x + d.y*u.y);
+      const lat = Math.abs(d.x*u.y - d.y*u.x);
+      if (lon > lonTol || lat > latMax || lat < 1e-6) continue;
+      if (lat < bd){ bd = lat; best = j; }
+    }
+    if (best >= 0) out.push({el:o, i:best});
+  }
+  return out.length > 1 ? out : null;
+}
+
+// Gruppengriffe des ausgewählten Wegs: Position (Mitte) und beteiligte Punkte
+function groupHandles(el){
+  const out = [];
+  if (!el || TYPES[el.t].geom !== 'line') return out;
+  for (let i = 0; i < el.pts.length; i++){
+    const g = crossGroup(el, i);
+    if (!g) continue;
+    let cx = 0, cy = 0;
+    for (const m of g){ cx += m.el.pts[m.i].x; cy += m.el.pts[m.i].y; }
+    out.push({p:{x:cx/g.length, y:cy/g.length}, members:g});
+  }
+  return out;
+}
+
+// Punkte anderer Wege, deren Tangente mit dieser zusammenhängt:
+// deckungsgleich angeschlossen oder quer auf gleicher Höhe daneben.
+// `s` ist +1/-1, je nachdem ob der Nachbarweg gleich- oder gegenläufig ist.
+function tanPeers(el, i){
+  const T = TYPES[el.t];
+  if (T.geom !== 'line' || T.render === 'zebra') return [];
+  const P = el.pts[i];
+  const u = autoTangent(el.pts, i, false);
+  if (!u.x && !u.y) return [];
+  const joinTol = 0.6*ppm, lonTol = 1.6*ppm, latMax = 14*ppm;
+  const out = [];
+  for (const o of elements){
+    const OT = TYPES[o.t];
+    if (o === el || OT.geom !== 'line' || OT.render === 'zebra') continue;
+    let best = -1, bd = Infinity, join = false;
+    for (let j = 0; j < o.pts.length; j++){
+      const d = {x:o.pts[j].x - P.x, y:o.pts[j].y - P.y};
+      const dd = Math.hypot(d.x, d.y);
+      if (dd < joinTol){ best = j; bd = dd; join = true; break; }
+      const lon = Math.abs(d.x*u.x + d.y*u.y);
+      const lat = Math.abs(d.x*u.y - d.y*u.x);
+      if (lon > lonTol || lat > latMax) continue;
+      if (lat < bd){ bd = lat; best = j; }
+    }
+    if (best < 0) continue;
+    const v = autoTangent(o.pts, best, false);
+    const dot = u.x*v.x + u.y*v.y;
+    if (!join && Math.abs(dot) < 0.5) continue;   // quer laufende Wege nicht koppeln
+    out.push({el:o, i:best, s: dot < 0 ? -1 : 1, join});
+  }
+  return out;
+}
+
+// Tangente an allen angeschlossenen Punkten gleich mitführen
+function spreadTangent(el, i, v){
+  for (const q of tanPeers(el, i)){
+    tgArr(q.el)[q.i] = {x:v.x*q.s, y:v.y*q.s};
+  }
+}
+
+// Richtung an einem Anschluss auf beide Wege übertragen
+function syncJoinTangents(el, i){
+  if (!isSmooth(el)) return;
+  const peers = tanPeers(el, i).filter(q => q.join && isSmooth(q.el));
+  if (!peers.length) return;
+  const v = tangentAt(el, i, TYPES[el.t].geom === 'area');
+  if (Math.hypot(v.x, v.y) < 1e-6) return;
+  tgArr(el)[i] = {x:v.x, y:v.y};
+  for (const q of peers) tgArr(q.el)[q.i] = {x:v.x*q.s, y:v.y*q.s};
+}
+
+// Beim Anschließen die Richtung des Nachbarn übernehmen
+function adoptTangent(el, i){
+  const peers = tanPeers(el, i);
+  if (!peers.length) return false;
+  const q = peers[0];
+  const v = tangentAt(q.el, q.i, false);
+  if (Math.hypot(v.x, v.y) < 1e-6) return false;
+  tgArr(el)[i] = {x:v.x*q.s, y:v.y*q.s};
+  return true;
+}
+
+// Beim Ziehen eines Punktes auf die Höhe eines Nachbarpunktes einrasten
+function heightSnap(el, i, p){
+  const T = TYPES[el.t];
+  if (T.geom !== 'line' || T.render === 'zebra') return null;
+  const u = autoTangent(el.pts, i, false);
+  if (!u.x && !u.y) return null;
+  const tol = 9/view.k, latMax = 14*ppm;
+  let best = null, bd = tol;
+  for (const o of elements){
+    const OT = TYPES[o.t];
+    if (o === el || OT.geom !== 'line' || OT.render === 'zebra') continue;
+    for (const q of o.pts){
+      const d = {x:q.x - p.x, y:q.y - p.y};
+      const lon = d.x*u.x + d.y*u.y;
+      const lat = Math.abs(d.x*u.y - d.y*u.x);
+      if (lat > latMax || Math.abs(lon) > bd) continue;
+      bd = Math.abs(lon);
+      best = {x:p.x + u.x*lon, y:p.y + u.y*lon};
+    }
+  }
+  return best;
 }
 
 // Abschnitte -----------------------------------------------------------
@@ -968,15 +1221,6 @@ function removeCut(el, idx){
   el.cuts.splice(idx, 1);
   if (el.mk) el.mk.splice(idx+1, 1);
   if (!el.cuts.length){ delete el.cuts; delete el.mk; }
-}
-function rootOf(el){
-  let guard = 0;
-  while (el && el.par && guard++ < 20){
-    const par = elements.find(x => x.id === el.par.id);
-    if (!par) break;
-    el = par;
-  }
-  return el;
 }
 
 // Krümmungsradius durch drei Punkte
@@ -1028,11 +1272,14 @@ function curveInfo(el){
 /* ============================================================
    Zeichnen
    ============================================================ */
-function poly(g, pts, close){
-  g.beginPath(); g.moveTo(pts[0].x, pts[0].y);
+// addPoly hängt an den laufenden Pfad an, poly beginnt einen neuen
+function addPoly(g, pts, close){
+  if (!pts || !pts.length) return;
+  g.moveTo(pts[0].x, pts[0].y);
   for (let i=1;i<pts.length;i++) g.lineTo(pts[i].x, pts[i].y);
   if (close) g.closePath();
 }
+function poly(g, pts, close){ g.beginPath(); addPoly(g, pts, close); }
 
 // Eine Markierungslinie zeichnen
 function drawMarkLine(g, P, style){
@@ -1046,20 +1293,40 @@ function drawMarkLine(g, P, style){
   g.setLineDash([]);
 }
 
+// Gestrichelte Weiterführung durch Knoten – liegt über allen Belägen
+function drawDashThrough(g){
+  for (const el of elements){
+    const dash = clipDash[el.id];
+    if (!dash || !dash.length) continue;
+    const T = TYPES[el.t];
+    if (T.geom !== 'line') continue;
+    const S = shape(el).pts;
+    if (S.length < 2) continue;
+    const w = (el.w ?? T.w)*ppm;
+    g.lineJoin = 'round';
+    for (const b of dash){
+      withClipInside(g, b, ()=>{
+        for (const side of ['l','r']){
+          const style = markOf(el, side, 0);
+          if (!MARKS[style] || !MARKS[style].w) continue;
+          drawMarkLine(g, offsetPoly(S, side === 'l' ? w/2 : -w/2, false), 'kurz');
+        }
+      });
+    }
+  }
+}
+
 // Markierung einer Seite: abschnittsweise, ausgespart in Querungen und Kreisverkehren
 function drawMark(g, el, S, off, side){
   if (S.length < 2) return;
   const P = off ? offsetPoly(S, off, false) : S;
-  const skip = (crossMap[el.id] || []).concat(maskMap[el.id] || []);
-  const cuts = (el.cuts || []).concat(skip.flat());
-  const secs = splitPath(P, cuts);
+  const secs = splitPath(P, el.cuts);
   const total = pathParts(P).total || 1;
   let acc = 0;
   for (const sc of secs){
     const l = pathParts(sc).total;
     const mid = (acc + l/2)/total;
     acc += l;
-    if (skip.some(([a,b]) => mid >= a && mid <= b)) continue;
     drawMarkLine(g, sc, markOf(el, side, segAt(el, mid)));
   }
 }
@@ -1145,18 +1412,38 @@ function drawBand(g, el, T){
   if (el.pts.length < 2) return;
   const S = shape(el).pts;
   const w = (el.w ?? T.w) * ppm;
+  const cross = clipCross[el.id] || [];
+  const mask = clipMask[el.id] || [];
   g.lineJoin = 'round'; g.lineCap = 'butt';
-  const cross = crossMap[el.id];
-  if (cross){
-    for (const part of splitFlagged(S, cross)){
-      if (part.inside) drawCrossing(g, part.pts, T, w);
-      else paintBand(g, part.pts, T, w, el);
+
+  // Belag: überall außer in den gequerten Bändern
+  withClipOutside(g, cross, ()=>{
+    paintBand(g, S, T, w, el);
+    if (T.ticks) drawTicks(g, S, w, T.ticks);
+  });
+
+  // Querungsmarkierung: nur innerhalb des jeweils gequerten Bandes,
+  // dadurch enden linke und rechte Kante an der richtigen Stelle
+  const iv = crossMap[el.id];
+  if (iv && cross.length){
+    const total = pathParts(S).total || 1;
+    const pad = w/total;
+    for (const b of cross){
+      withClipInside(g, b, ()=>{
+        for (const [a, e] of iv)
+          drawCrossing(g, subPath(S, Math.max(0, a-pad), Math.min(1, e+pad)), T, w);
+      });
     }
-  } else paintBand(g, S, T, w, el);
-  if (T.ticks) drawTicks(g, S, w, T.ticks);
-  drawMark(g, el, S,  w/2, 'l');
-  drawMark(g, el, S, -w/2, 'r');
-  drawMark(g, el, S,  0,   'mid');
+  }
+
+  // Randmarkierungen: nicht in Querungen und nicht in Kreuzungsflächen
+  const dash = clipDash[el.id] || [];
+  withClipOutside(g, cross.concat(mask).concat(dash), ()=>{
+    drawMark(g, el, S,  w/2, 'l');
+    drawMark(g, el, S, -w/2, 'r');
+    drawMark(g, el, S,  0,   'mid');
+  });
+
 }
 
 // Punkt und Normale bei Bogenlänge d
@@ -1360,13 +1647,11 @@ function drawElement(g, el){
 function renderScene(g){
   if (img){ g.globalAlpha = imgOpacity; g.drawImage(img, 0, 0); g.globalAlpha = 1; }
   if (hideDesign) return;
-  crossMap = {}; maskMap = {};
-  for (const el of elements){
-    const c = crossingsFor(el); if (c) crossMap[el.id] = c;
-    const m = maskFor(el);      if (m) maskMap[el.id] = m;
-  }
+  crossMap = {}; clipCross = {}; clipMask = {}; clipDash = {};
+  for (const el of elements) solveBlockers(el);
   const sorted = elements.slice().sort((a,b)=>TYPES[a.t].z - TYPES[b.t].z);
   for (const el of sorted) drawElement(g, el);
+  drawDashThrough(g);
 }
 
 function drawGrid(){
@@ -1383,20 +1668,23 @@ function drawGrid(){
   ctx.stroke();
 }
 
-// Gekoppelte Nachbarspuren aus ihrer Bezugsspur ableiten
-function solveLinks(){
-  for (const el of elements){
-    if (!el.par) continue;
-    const par = elements.find(x => x.id === el.par.id);
-    const T = TYPES[el.t];
-    if (!par || TYPES[par.t].geom !== 'line' || T.geom !== 'line'){ delete el.par; continue; }
-    const PT = TYPES[par.t];
-    const off = el.par.side * (((par.w ?? PT.w) + (el.w ?? T.w))/2) * ppm;
-    el.pts = offsetPoly(par.pts, off, false);
-    el.cv = par.cv; el.cr = par.cr;
-    if (par.cuts){ el.cuts = par.cuts.slice(); ensureMk(el); }
-    else if (el.cuts){ delete el.cuts; delete el.mk; }
+// Nachbarwege auf einer Seite (links = +Normale, wie beim Zeichnen der Markierung)
+function sideNeighbours(el, side){
+  const T = TYPES[el.t];
+  if (T.geom !== 'line' || T.render === 'zebra') return [];
+  const sgn = side === 'l' ? 1 : -1;
+  const seen = new Map();
+  for (let i = 0; i < el.pts.length; i++){
+    const u = autoTangent(el.pts, i, false);
+    if (!u.x && !u.y) continue;
+    const nx = u.y, ny = -u.x;
+    for (const q of tanPeers(el, i)){
+      if (q.join || seen.has(q.el.id)) continue;
+      const d = {x:q.el.pts[q.i].x - el.pts[i].x, y:q.el.pts[q.i].y - el.pts[i].y};
+      if ((d.x*nx + d.y*ny) * sgn > 0) seen.set(q.el.id, {el:q.el, s:q.s});
+    }
   }
+  return [...seen.values()];
 }
 
 // Pfeile sitzen auf einer Fahrspur und folgen ihr
@@ -1415,10 +1703,20 @@ function solveArrows(){
   }
 }
 
-function unlink(el){ if (el && el.par) delete el.par; }
+// Beim Trennen die aktuelle Kurvenform festhalten, damit die Spur ab dem
+// gezogenen Punkt zunächst in dieselbe Richtung weiterläuft
+function freezeTangents(el){
+  if (!el || !isSmooth(el)) return;
+  const closed = TYPES[el.t].geom === 'area';
+  const t = el.pts.map((_, i) => {
+    const v = tangentAt(el, i, closed);
+    return {x:v.x, y:v.y};
+  });
+  el.tg = t;
+}
+
 
 function draw(){
-  solveLinks();
   solveArrows();
   const dpr = window.devicePixelRatio || 1;
   ctx.setTransform(1,0,0,1,0,0);
@@ -1433,12 +1731,17 @@ function draw(){
 
   // Entwurf in Arbeit
   if (draft){
-    const dc = crossingsFor(draft); if (dc) crossMap[draft.id] = dc;
-    const dm = maskFor(draft);      if (dm) maskMap[draft.id] = dm;
+    solveBlockers(draft);
     ctx.globalAlpha = 0.75; drawElement(ctx, draft); ctx.globalAlpha = 1;
     ctx.lineWidth = 1.5/view.k; ctx.strokeStyle = cssv('--accent-bg');
     if (draft.pts.length > 1 && TYPES[draft.t].geom !== 'circle'){ poly(ctx, draft.pts); ctx.stroke(); }
     for (const p of draft.pts) handle(p);
+  }
+
+  if (ghost){
+    ctx.globalAlpha = 0.55;
+    drawElement(ctx, ghost);
+    ctx.globalAlpha = 1;
   }
 
   // Auswahl
@@ -1490,7 +1793,25 @@ function draw(){
           ctx.globalAlpha = 1;
         }
       }
-      if (T.geom !== 'arrow' && T.geom !== 'bar') for (const p of el.pts) handle(p);
+      if (T.geom !== 'arrow' && T.geom !== 'bar'){
+        if (isSmooth(el)){
+          ctx.lineWidth = 1/view.k;
+          ctx.strokeStyle = 'rgba(242,180,65,.65)';
+          for (let i = 0; i < el.pts.length; i++){
+            const h = tanHandles(el, i);
+            if (!h) continue;
+            ctx.beginPath();
+            ctx.moveTo(h[1].x, h[1].y); ctx.lineTo(h[0].x, h[0].y);
+            ctx.stroke();
+            for (const q of h) tanHandle(q, !!(el.tg && el.tg[i]));
+          }
+        }
+        for (let i = 0; i < el.pts.length; i++){
+          if (tanPeers(el, i).some(q => q.join)) joinRing(el.pts[i]);
+          handle(el.pts[i], activePt === i);
+        }
+        for (const g of groupHandles(el)) groupHandle(g.p);
+      }
       if (T.geom === 'circle') handle({x:el.pts[0].x + (el.r??T.r)*ppm, y:el.pts[0].y});
     }
   }
@@ -1509,13 +1830,24 @@ function draw(){
   if (snapMark){
     const m = snapMark.p;
     ctx.strokeStyle = cssv('--accent-bg'); ctx.lineWidth = 1.5/view.k;
-    if (snapMark.kind === 'e'){
-      const n = snapMark.n, l = 9/view.k;
+    if (snapMark.kind === 'h'){
+      const l = 10/view.k;
+      ctx.beginPath();
+      ctx.moveTo(m.x - l, m.y); ctx.lineTo(m.x + l, m.y);
+      ctx.moveTo(m.x, m.y - l); ctx.lineTo(m.x, m.y + l);
+      ctx.stroke();
+    } else if (snapMark.kind === 'e'){
+      const n = snapMark.n, l = (snapMark.vtx ? 13 : 9)/view.k;
       ctx.beginPath();
       ctx.moveTo(m.x - n.x*l, m.y - n.y*l);
       ctx.lineTo(m.x + n.x*l, m.y + n.y*l);
       ctx.stroke();
-      ctx.beginPath(); ctx.arc(m.x, m.y, 3/view.k, 0, Math.PI*2); ctx.stroke();
+      if (snapMark.vtx){
+        const s2 = 4.5/view.k;
+        ctx.strokeRect(m.x - s2, m.y - s2, s2*2, s2*2);
+      } else {
+        ctx.beginPath(); ctx.arc(m.x, m.y, 3/view.k, 0, Math.PI*2); ctx.stroke();
+      }
     } else {
       ctx.beginPath(); ctx.arc(m.x, m.y, 6/view.k, 0, Math.PI*2); ctx.stroke();
     }
@@ -1628,11 +1960,42 @@ function drawWarnings(){
   ctx.textBaseline = 'alphabetic';
 }
 
-function handle(p){
-  const s = 4/view.k;
-  ctx.fillStyle = cssv('--accent-bg');
-  ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.lineWidth = 1/view.k;
+// Ring um Punkte, an denen ein anderer Weg angeschlossen ist
+function joinRing(p){
+  ctx.beginPath(); ctx.arc(p.x, p.y, 9/view.k, 0, Math.PI*2);
+  ctx.lineWidth = 1.6/view.k; ctx.strokeStyle = cssv('--accent-bg');
+  ctx.stroke();
+}
+
+// Raute: verschiebt alle quer benachbarten Punkte gemeinsam
+function groupHandle(p){
+  const s2 = 6/view.k;
+  ctx.beginPath();
+  ctx.moveTo(p.x, p.y - s2); ctx.lineTo(p.x + s2, p.y);
+  ctx.lineTo(p.x, p.y + s2); ctx.lineTo(p.x - s2, p.y);
+  ctx.closePath();
+  ctx.fillStyle = cssv('--chrome'); ctx.fill();
+  ctx.lineWidth = 2/view.k; ctx.strokeStyle = cssv('--accent-bg'); ctx.stroke();
+  ctx.beginPath(); ctx.arc(p.x, p.y, 1.6/view.k, 0, Math.PI*2);
+  ctx.fillStyle = cssv('--accent-bg'); ctx.fill();
+}
+
+// Runder Griff für Tangenten; gefüllt, wenn der Nutzer sie selbst gesetzt hat
+function tanHandle(p, own){
+  const r = 3.6/view.k;
+  ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI*2);
+  ctx.fillStyle = own ? cssv('--accent-bg') : cssv('--chrome');
+  ctx.fill();
+  ctx.lineWidth = 1.4/view.k; ctx.strokeStyle = cssv('--accent-bg');
+  ctx.stroke();
+}
+
+function handle(p, active){
+  const s = (active ? 6 : 4)/view.k;
+  ctx.fillStyle = active ? cssv('--chrome') : cssv('--accent-bg');
   ctx.fillRect(p.x-s, p.y-s, s*2, s*2);
+  ctx.lineWidth = (active ? 2.2 : 1)/view.k;
+  ctx.strokeStyle = active ? cssv('--accent-bg') : 'rgba(0,0,0,.55)';
   ctx.strokeRect(p.x-s, p.y-s, s*2, s*2);
 }
 
@@ -1694,9 +2057,20 @@ function hitElement(p){
   return null;
 }
 function hitHandle(p){
-  const el = elements.find(e=>e.id===sel); if (!el) return null;
+  let el = elements.find(e=>e.id===sel); if (!el) return null;
   if (TYPES[el.t].geom === 'arrow' || TYPES[el.t].geom === 'bar') return null;
   const tol = 8/view.k, T = TYPES[el.t];
+  for (const g of groupHandles(el)){
+    if (dist(p, g.p) < tol + 2/view.k) return {el, i:'g', group:g.members};
+  }
+  if (isSmooth(el)){
+    for (let i=0;i<el.pts.length;i++){
+      const h = tanHandles(el, i);
+      if (!h) continue;
+      if (dist(p, h[0]) < tol) return {el, i, tan: 1};
+      if (dist(p, h[1]) < tol) return {el, i, tan:-1};
+    }
+  }
   for (let i=0;i<el.pts.length;i++) if (dist(p, el.pts[i]) < tol) return {el, i};
   if (T.geom === 'circle'){
     const h = {x:el.pts[0].x + (el.r??T.r)*ppm, y:el.pts[0].y};
@@ -1727,20 +2101,37 @@ function nearestOnPath(p, S){
   return best;
 }
 
-// Bündig an die Nachbarspur: Achsabstand = halbe Breite + halbe Breite
+// Bündig an die Nachbarspur: Achsabstand = halbe Breite + halbe Breite.
+// Auf Höhe eines Stützpunktes rastet es zusätzlich längs ein, damit die
+// Punkte beider Spuren übereinander liegen.
 function edgeSnap(p, self, w){
   if (!w) return null;
-  const tol = 16/view.k;
-  let best = null, bd = tol;
+  const tol = 16/view.k, vtxTol = 24/view.k;
+  let best = null, bd = tol, bestVtx = null, bvd = vtxTol;
   for (const el of elements){
     if (el === self) continue;
     const T = TYPES[el.t];
     if (T.geom !== 'line' || T.render === 'zebra') continue;
     const S = shape(el).pts;
     if (S.length < 2) continue;
+    const off = (((el.w ?? T.w) + w)/2) * ppm;
+    const closed = T.geom === 'area';
+
+    // bevorzugt: auf Höhe eines Stützpunktes der Nachbarspur
+    for (let j = 0; j < el.pts.length; j++){
+      const u = autoTangent(el.pts, j, closed);
+      if (!u.x && !u.y) continue;
+      const nx = u.y, ny = -u.x, q = el.pts[j];
+      for (const sgn of [1,-1]){
+        const c = {x:q.x + nx*sgn*off, y:q.y + ny*sgn*off};
+        const d = dist(p, c);
+        if (d < bvd){ bvd = d; bestVtx = {p:c, n:{x:nx*sgn, y:ny*sgn}, vtx:true}; }
+      }
+    }
+
+    // sonst frei entlang der Kante
     const np = nearestOnPath(p, S);
     if (!np) continue;
-    const off = (((el.w ?? T.w) + w)/2) * ppm;
     const nx = np.u.y, ny = -np.u.x;
     for (const sgn of [1,-1]){
       const c = {x:np.q.x + nx*sgn*off, y:np.q.y + ny*sgn*off};
@@ -1748,7 +2139,7 @@ function edgeSnap(p, self, w){
       if (d < bd){ bd = d; best = {p:c, n:{x:nx*sgn, y:ny*sgn}}; }
     }
   }
-  return best;
+  return bestVtx || best;
 }
 
 // Stützpunkt hat Vorrang vor Kante; Alt setzt den Fang aus
@@ -1757,7 +2148,7 @@ function snapPoint(p, self, w){
   const v = snap(p, self);
   if (v) return {p:v, kind:'v'};
   const e = edgeSnap(p, self, w);
-  return e ? {p:e.p, kind:'e', n:e.n} : null;
+  return e ? {p:e.p, kind:'e', n:e.n, vtx:e.vtx} : null;
 }
 
 // Parallele Führung im Abstand d (Weltpixel, links positiv)
@@ -1838,6 +2229,7 @@ function restore(){
   if (!data) return;
   ppm = data.ppm || ppm; calibrated = !!data.calibrated;
   elements = Array.isArray(data.elements) ? data.elements : [];
+  for (const el of elements) delete el.par;
   uid = data.uid || (elements.length + 1);
   syncScaleState();
   if (data.imgSrc) loadImage(data.imgSrc);
@@ -1906,6 +2298,7 @@ function applyProject(d){
     throw new Error('Das ist keine Straßenskizze.');
   pushHistory();
   elements = d.elements;
+  for (const el of elements) delete el.par;   // frühere Kopplung: Wege stehen jetzt für sich
   ppm = d.ppm || ppm;
   calibrated = !!d.calibrated;
   uid = Math.max(d.uid || 0, elements.reduce((m,e) => Math.max(m, e.id || 0), 0) + 1);
@@ -2116,8 +2509,9 @@ function extLive(){
 function endExtend(){
   if (!ext) return;
   const el = ext.el;
-  if (ext.atStart) el.pts.shift(); else el.pts.pop();
-  ext = null; snapMark = null;
+  if (ext.atStart){ el.pts.shift(); tgRemove(el, 0); }
+  else { el.pts.pop(); if (el.tg) el.tg.pop(); }
+  ext = null; snapMark = null; pen = null;
   cv.style.cursor = tool === 'select' ? 'default' : 'crosshair';
   syncInspector(); updateHint(); save(); draw();
 }
@@ -2127,8 +2521,13 @@ function commitDraft(){
   const T = TYPES[draft.t];
   const pts = draft.pts.slice(0, draft.live ? -1 : undefined);
   if ((T.geom === 'line' && pts.length >= 2) || (T.geom === 'area' && pts.length >= 3)){
+    if (draft.tg) draft.tg.length = pts.length;
     draft.pts = pts; delete draft.live;
     pushHistory(); elements.push(draft);
+    if (isSmooth(draft)){
+      for (const i of [0, draft.pts.length-1])
+        if (!(draft.tg && draft.tg[i])) adoptTangent(draft, i);
+    }
   }
   draft = null; draw(); updateHint();
 }
@@ -2146,8 +2545,10 @@ cv.addEventListener('pointerdown', e=>{
     const sn = snapPoint(p, ext.el, T2.geom === 'line' ? (ext.el.w ?? T2.w) : 0);
     const q = sn ? sn.p : p;
     const live = extLive(); live.x = q.x; live.y = q.y;
-    if (ext.atStart) ext.el.pts.unshift({x:q.x, y:q.y});
-    else ext.el.pts.push({x:q.x, y:q.y});
+    if (ext.atStart){ tgInsert(ext.el, 0); ext.el.pts.unshift({x:q.x, y:q.y}); pen = {el:ext.el, i:1, o:{x:q.x, y:q.y}}; }
+    else { tgArr(ext.el); ext.el.pts.push({x:q.x, y:q.y}); pen = {el:ext.el, i:ext.el.pts.length-2, o:{x:q.x, y:q.y}}; }
+    if (sn && isSmooth(ext.el)) adoptTangent(ext.el, pen.i);
+    syncJoinTangents(ext.el, pen.i);
     draw(); return;
   }
 
@@ -2156,7 +2557,7 @@ cv.addEventListener('pointerdown', e=>{
     if (!hit) return;
     const HT = TYPES[hit.t];
     if (HT.geom !== 'line' || HT.render === 'zebra') return;
-    const el = rootOf(hit);
+    const el = hit;
     const S = shape(el).pts;
     const u = paramAt(S, p);
     pushHistory();
@@ -2182,20 +2583,34 @@ cv.addEventListener('pointerdown', e=>{
       if (Math.hypot(s.x-b.s.x, s.y-b.s.y) > 11) continue;
       const el = elements.find(x => x.id === sel);
       if (!el) break;
-      if (b.kind === 'ext'){ startExtend(rootOf(el), b.atStart); return; }
-      const target = rootOf(el);
+      if (b.kind === 'ext'){ startExtend(el, b.atStart); return; }
+      const target = el;
       pushHistory();
+      tgInsert(target, b.i+1);
       target.pts.splice(b.i+1, 0, curvePointBetween(target, b.i));
       if (target !== el) sel = target.id;
+      activePt = b.i+1;
       syncInspector(); draw(); return;
     }
     const h = hitHandle(p);
-    if (h){ drag = {kind:'handle', before:snapshot(), ...h}; unlink(h.el); return; }
+    if (h){
+      if (typeof h.i === 'number' && !h.tan) activePt = h.i;
+      else activePt = null;
+      drag = {kind:'handle', before:snapshot(), last:p, origin:p, ...h};
+      // Deckungsgleiche Anschlusspunkte wandern mit; Alt löst sie
+      if (typeof h.i === 'number' && !h.tan){
+        if (altDown) drag.altPt = true;
+        else drag.joins = tanPeers(h.el, h.i).filter(q => q.join);
+      }
+      syncInspector();
+      return;
+    }
     const el = hitElement(p);
+    if (!el || el.id !== sel) activePt = null;
     sel = el ? el.id : null;
     if (el){
       selSeg = TYPES[el.t].geom === 'line' ? segAt(el, paramAt(shape(el).pts, p)) : 0;
-      drag = {kind:'move', before:snapshot(), el, last:p}; unlink(el);
+      drag = {kind:'move', before:snapshot(), el, last:p};
     }
     syncInspector(); draw(); return;
   }
@@ -2203,17 +2618,14 @@ cv.addEventListener('pointerdown', e=>{
   const T = TYPES[tool];
 
   if (T.geom === 'arrow' || T.geom === 'bar'){
-    const hit = hitElement(p);
-    const HT = hit && TYPES[hit.t];
-    const okHost = hit && HT.geom === 'line' && HT.render !== 'zebra' && !HT.ticks &&
-                   (T.geom === 'arrow' ? HT.kfz : HT.rank <= 2);
-    if (!okHost) return;
+    const gh = makeGhost(p);
+    if (!gh) return;
     pushHistory();
-    const el = {id:uid++, t:tool, on:hit.id, u:paramAt(shape(hit).pts, p)};
-    if (T.geom === 'arrow'){ el.kind = lastArrow; el.len = 5; }
-    else el.kind = lastBar;
+    const el = {id:uid++, t:tool, on:gh.on, u:gh.u, kind:gh.kind};
+    if (T.geom === 'arrow') el.len = gh.len;
     elements.push(el);
     sel = el.id; selSeg = 0;
+    ghost = null;
     syncInspector(); draw(); return;
   }
 
@@ -2231,11 +2643,15 @@ cv.addEventListener('pointerdown', e=>{
   }
   if (!draft){
     draft = newElement(tool, [sp, {x:sp.x, y:sp.y}]); draft.live = true;
+    pen = {el:draft, i:0, o:{x:sp.x, y:sp.y}};
+    draft.pts.length = 2;
   } else {
     draft.pts[draft.pts.length-1] = sp;
     if (T.maxPts && draft.pts.length >= T.maxPts){ draft.live = false; commitDraft(); return; }
+    pen = {el:draft, i:draft.pts.length-1, o:{x:sp.x, y:sp.y}};
     draft.pts.push({x:sp.x, y:sp.y});
   }
+  if (sn && isSmooth(draft)) adoptTangent(draft, pen.i);
   draw(); updateHint();
 });
 
@@ -2260,11 +2676,53 @@ cv.addEventListener('pointermove', e=>{
       drag.el.r = Math.max(2, dist(p, drag.el.pts[0])/ppm);
       syncInspector(); draw(); return;
     }
+    if (drag.i === 'g'){
+      const dx = p.x - drag.last.x, dy = p.y - drag.last.y;
+      const done = new Set();
+      for (const m of drag.group){
+        const host = m.el;
+        const key = host.id + ':' + m.i;
+        if (done.has(key) || !host.pts[m.i]) continue;
+        done.add(key);
+        host.pts[m.i].x += dx; host.pts[m.i].y += dy;
+        syncJoinTangents(host, m.i);
+      }
+      drag.last = p;
+      draw(); return;
+    }
+    if (drag.tan){
+      const el = drag.el, o = el.pts[drag.i];
+      const v = {x:(p.x - o.x) * drag.tan, y:(p.y - o.y) * drag.tan};
+      tgArr(el)[drag.i] = v;
+      spreadTangent(el, drag.i, v);
+      draw(); return;
+    }
     const dT = TYPES[drag.el.t];
     const dw = dT.geom === 'line' && dT.render !== 'zebra' ? (drag.el.w ?? dT.w) : 0;
     const sn = snapPoint(p, drag.el, dw);
-    drag.el.pts[drag.i] = sn ? sn.p : p;
-    snapMark = sn; draw(); return;
+    let q = sn ? sn.p : p;
+    if (!sn && !altDown){
+      const hs = heightSnap(drag.el, drag.i, p);
+      if (hs){ q = hs; snapMark = {p:hs, kind:'h'}; } else snapMark = null;
+    } else snapMark = sn;
+    if (dist(p, drag.origin) > 4/view.k) drag.moved = true;
+    drag.el.pts[drag.i] = q;
+    // angeschlossene Wege folgen und behalten dieselbe Richtung
+    if (drag.joins) for (const j of drag.joins){ j.el.pts[j.i].x = q.x; j.el.pts[j.i].y = q.y; }
+    syncJoinTangents(drag.el, drag.i);
+    draw(); return;
+  }
+
+  if (pen){
+    const el = pen.el;
+    if (isSmooth(el) && dist(p, pen.o) > 6/view.k){
+      const v = {x:p.x - pen.o.x, y:p.y - pen.o.y};
+      tgArr(el)[pen.i] = v;
+      spreadTangent(el, pen.i, v);
+      pen.used = true;
+      draw(); return;
+    }
+    if (pen.used) return;
   }
 
   if (ext){
@@ -2287,25 +2745,45 @@ cv.addEventListener('pointermove', e=>{
   }
 
   if (mode === 'scale'){ draw(); return; }
-  const before = snapMark;
   const hT = tool !== 'select' ? TYPES[tool] : null;
+  if (hT && (hT.geom === 'arrow' || hT.geom === 'bar')){
+    const before = ghost;
+    ghost = makeGhost(p);
+    snapMark = null;
+    if (before || ghost) draw();
+    return;
+  }
+  const before = snapMark;
   snapMark = hT ? snapPoint(p, null, hT.geom === 'line' && hT.render !== 'zebra' ? hT.w : 0) : null;
   if (before || snapMark) draw();
 });
 
 cv.addEventListener('pointerup', e=>{
+  if (pen){ const was = pen; pen = null; if (was.used && (draft || ext)){ draw(); return; } }
   if (pan){ pan = null; return; }
+  if (drag && drag.altPt && !drag.moved){
+    const d = drag; drag = null; snapMark = null;
+    deletePoint(d.el, d.i);
+    return;
+  }
   if (drag){
     if (drag.before && drag.before !== snapshot()){
       undoStack.push(drag.before); redoStack.length = 0; syncHistoryButtons();
     }
-    drag = null; snapMark = null; save(); draw(); return;
+    if (typeof drag.i === 'number' && !drag.tan && isSmooth(drag.el)
+        && !(drag.el.tg && drag.el.tg[drag.i])){
+      adoptTangent(drag.el, drag.i);
+    }
+    drag = null; snapMark = null; save(); syncInspector(); draw(); return;
   }
   if (draft && TYPES[draft.t].geom === 'circle' && draft.r*ppm*view.k > 8){
     pushHistory(); elements.push(draft); draft = null; draw();
   }
 });
 
+cv.addEventListener('pointerleave', ()=>{
+  if (ghost || snapMark){ ghost = null; snapMark = null; draw(); }
+});
 cv.addEventListener('dblclick', ()=>{ if (ext) endExtend(); else if (draft) commitDraft(); });
 cv.addEventListener('contextmenu', e=>{ e.preventDefault(); if (ext) endExtend(); else if (draft) commitDraft(); });
 
@@ -2364,6 +2842,7 @@ const ins = {
   fr: document.getElementById('fieldR'), r: document.getElementById('insR'), rr: document.getElementById('insRR'),
   fc: document.getElementById('fieldCurve'), seg: document.getElementById('segCurve'),
   rowCR: document.getElementById('rowCR'), cr: document.getElementById('insCR'), crr: document.getElementById('insCRR'),
+  fx: document.getElementById('fieldX'),
   fcol: document.getElementById('fieldCol'), segCol: document.getElementById('segCol'),
   fbar: document.getElementById('fieldBar'), segBar: document.getElementById('segBar'),
   fa: document.getElementById('fieldArrow'), aKind: document.getElementById('arrowKind'),
@@ -2372,7 +2851,6 @@ const ins = {
   fm: document.getElementById('fieldMark'),
   mk: {l:document.getElementById('markL'), mid:document.getElementById('markM'), r:document.getElementById('markR')},
   fp: document.getElementById('fieldPar'), segPar: document.getElementById('segPar'),
-  rowLink: document.getElementById('rowLink'), linkInfo: document.getElementById('linkInfo'),
   note: document.getElementById('insNote'),
 };
 
@@ -2476,11 +2954,32 @@ function syncInspector(){
     document.getElementById('chkQZ').checked = el.qz !== false;
   }
   ins.fp.hidden = !(T.geom === 'line' && T.render !== 'zebra' && el.pts.length >= 2);
-  ins.rowLink.hidden = !el.par;
-  if (el.par){
-    const par = elements.find(x => x.id === el.par.id);
-    ins.linkInfo.innerHTML = par ? 'bündig gekoppelt an <b>'+TYPES[par.t].n+'</b>' : '';
+  const partners = crossPartners(el);
+  ins.fx.hidden = !partners.length;
+  if (partners.length){
+    const box = document.getElementById('xList');
+    box.innerHTML = '';
+    for (const o of partners){
+      const row = document.createElement('div');
+      row.className = 'xrow';
+      row.innerHTML = '<b></b><select>'
+        + '<option value="frei">Fläche frei</option>'
+        + '<option value="strich">gestrichelt durch</option></select>';
+      row.querySelector('b').textContent = '× ' + TYPES[o.t].n;
+      row.querySelector('b').addEventListener('click', ()=>{ sel = o.id; selSeg = 0; syncInspector(); draw(); });
+      const selEl = row.querySelector('select');
+      selEl.value = xMode(el, o);
+      selEl.addEventListener('change', e=>{
+        pushHistory(); setXMode(el, o, e.target.value); syncInspector(); draw();
+      });
+      box.appendChild(row);
+    }
   }
+  const host = el;
+  const dp = document.getElementById('btnDelPt');
+  const canDel = activePt != null && host.pts[activePt] && host.pts.length > minPts(host);
+  dp.hidden = !canDel;
+  if (canDel) dp.textContent = 'Punkt ' + (activePt+1) + ' von ' + host.pts.length + ' löschen';
   const note = noteFor(el);
   ins.note.innerHTML = note ? note.html : '';
   ins.note.className = 'note' + (note && note.warn ? ' warn' : '');
@@ -2506,17 +3005,11 @@ function setMark(el, side, val, seg){
     if (other.cuts && other.cuts.length){ ensureMk(other); other.mk[Math.min(seg||0, other.mk.length-1)][sd] = val; }
     else other[sd] = val;
   };
-  for (const c of elements){
-    if (!c.par || c.par.id !== el.id) continue;
-    if (c.par.side > 0 && side === 'l') facing(c, 'mr');
-    if (c.par.side < 0 && side === 'r') facing(c, 'ml');
-  }
-  if (el.par){
-    const par = elements.find(x => x.id === el.par.id);
-    if (par){
-      if (el.par.side > 0 && side === 'r') facing(par, 'ml');
-      if (el.par.side < 0 && side === 'l') facing(par, 'mr');
-    }
+  // Die Linie gehört beiden: der Nachbar auf dieser Seite bekommt seine zugewandte Kante
+  for (const nb of sideNeighbours(el, side)){
+    let facingSide = side === 'l' ? 'r' : 'l';
+    if (nb.s < 0) facingSide = facingSide === 'l' ? 'r' : 'l';
+    facing(nb.el, facingSide === 'l' ? 'ml' : 'mr');
   }
 }
 for (const side of ['l','mid','r']){
@@ -2573,14 +3066,14 @@ document.getElementById('chkQZ').addEventListener('change', e=>{
   if (e.target.checked) delete el.qz; else el.qz = false;
   draw();
 });
+document.getElementById('btnDelPt').addEventListener('click', ()=>{
+  const el = elements.find(x=>x.id===sel); if (!el) return;
+  deletePoint(el, activePt);
+});
 document.getElementById('btnUncut').addEventListener('click', ()=>{
   const el = elements.find(x=>x.id===sel); if (!el || !el.cuts) return;
   pushHistory(); delete el.cuts; delete el.mk; selSeg = 0;
   syncInspector(); draw();
-});
-document.getElementById('btnUnlink').addEventListener('click', ()=>{
-  const el = elements.find(x=>x.id===sel); if (!el || !el.par) return;
-  pushHistory(); unlink(el); syncInspector(); draw();
 });
 ins.segPar.addEventListener('click', e=>{
   const b = e.target.closest('button'); if (!b) return;
@@ -2589,17 +3082,16 @@ ins.segPar.addEventListener('click', e=>{
   if (T.geom !== 'line') return;
   pushHistory();
   const side = b.dataset.side === 'l' ? 1 : -1;
+  freezeTangents(el);                       // Form festhalten, damit beide gleich laufen
   const copy = JSON.parse(JSON.stringify(el));
   copy.id = uid++;
-  copy.par = {id:el.id, side};
   copy.pts = offsetPoly(el.pts, side*(el.w ?? T.w)*ppm, false);
-  if (T.kfz){
-    if (side > 0){ setMark(el, 'l', 'leit', selSeg); copy.mr = 'leit'; }
-    else { setMark(el, 'r', 'leit', selSeg); copy.ml = 'leit'; }
-    if (el.cuts) delete copy.mk;
-  }
   elements.push(copy);
-  sel = copy.id; syncInspector(); draw();
+  if (T.kfz){
+    if (side > 0){ setMark(el, 'l', 'leit', selSeg); setMark(copy, 'r', 'leit', selSeg); }
+    else { setMark(el, 'r', 'leit', selSeg); setMark(copy, 'l', 'leit', selSeg); }
+  }
+  sel = copy.id; activePt = null; syncInspector(); draw();
 });
 ins.seg.addEventListener('click', e=>{
   const b = e.target.closest('button'); if (!b) return;
@@ -2614,7 +3106,30 @@ for (const [inp, field] of [[ins.w,'w'],[ins.wr,'w'],[ins.r,'r'],[ins.rr,'r'],[i
   inp.addEventListener('change', commitEdit);
   inp.addEventListener('blur', commitEdit);
 }
+// Mindestzahl an Stützpunkten je Geometrie
+function minPts(el){ return TYPES[el.t].geom === 'area' ? 3 : 2; }
+
+function deletePoint(el, i){
+  if (!el || i == null || !el.pts[i]) return false;
+  if (el.pts.length <= minPts(el)) return false;
+  pushHistory();
+  const gone = {x:el.pts[i].x, y:el.pts[i].y};
+  el.pts.splice(i, 1);
+  tgRemove(el, i);
+  // war der Punkt ein Anschluss, die verbliebenen Enden neu ausrichten
+  for (let k = 0; k < el.pts.length; k++)
+    if (dist(el.pts[k], gone) < 0.6*ppm) syncJoinTangents(el, k);
+  activePt = null;
+  syncInspector(); save(); draw();
+  return true;
+}
+
 function deleteSelection(){
+  const cur = elements.find(e=>e.id===sel);
+  if (cur && activePt != null){
+    const host = cur;
+    if (deletePoint(host, activePt)) return;
+  }
   const i = elements.findIndex(e=>e.id===sel); if (i < 0) return;
   const id = elements[i].id;
   pushHistory();
@@ -2628,7 +3143,7 @@ document.getElementById('insDup').addEventListener('click', ()=>{
   pushHistory();
   const off = 3*ppm;
   const copy = JSON.parse(JSON.stringify(el));
-  copy.id = uid++; delete copy.par;
+  copy.id = uid++;
   if (TYPES[el.t].geom === 'arrow' && copy.on)
     copy.u = Math.max(0, Math.min(1, (copy.u ?? 0.5) + 0.06));
   else
@@ -2806,6 +3321,8 @@ function updateHint(){
   if (tool === 'select'){
     h.innerHTML = '<b>Auswählen:</b> Element anklicken, Punkte an den Griffen ziehen. '
       + 'Das <b>+</b> zwischen zwei Punkten setzt einen Wegpunkt, das <b>+</b> am Ende verlängert. '
+      + 'Runde Griffe biegen die Kurve, die <b>Raute</b> verschiebt benachbarte Spuren gemeinsam. '
+      + 'Ein Punkt lässt sich anklicken und mit <kbd>Entf</kbd> löschen; <kbd>Alt</kbd> löscht ihn per Klick und löst ihn beim Ziehen aus seinen Bindungen. '
       + '<kbd>Entf</kbd> löscht, <kbd>Leertaste</kbd> + Ziehen verschiebt die Karte.';
     return;
   }
@@ -2830,7 +3347,7 @@ function updateHint(){
   if (T.geom === 'circle'){ h.innerHTML = '<b>'+T.n+':</b> Mitte klicken, Radius aufziehen, erneut klicken.'; return; }
   if (T.maxPts === 2){ h.innerHTML = '<b>'+T.n+':</b> von Bordstein zu Bordstein klicken – zwei Punkte.'; return; }
   h.innerHTML = '<b>'+T.n+' · '+fmt(T.w)+' m:</b> klicken für jeden Punkt, '
-    + '<kbd>Doppelklick</kbd> oder <kbd>Enter</kbd> beendet. <kbd>Umschalt</kbd> rastet Winkel ein.'
+    + '<kbd>Doppelklick</kbd> oder <kbd>Enter</kbd> beendet. Beim Klicken ziehen biegt die Kurve auf.'
     + (T.geom === 'line' ? ' Nahe an einer Spur rastet der Punkt bündig ein, <kbd>Alt</kbd> hebt das auf.' : '');
 }
 
